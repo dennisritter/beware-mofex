@@ -1,0 +1,18 @@
+{
+    "include": [
+        "src",
+        "tests"
+    ],
+    "executionEnvironments": [
+        {
+            "root": "src"
+        },
+        {
+            "root": "tests",
+            "extraPaths": [
+                "src"
+            ]
+        }
+    ],
+    "reportMissingTypeStubs": false
+}

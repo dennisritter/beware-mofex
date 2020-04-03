@@ -1,0 +1,11 @@
+name: hma
+channels:
+  - plotly
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8.*
+  - pip
+  - numpy
+  - opencv=4.2.*
