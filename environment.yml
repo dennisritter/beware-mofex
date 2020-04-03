@@ -1,4 +1,4 @@
-name: hma
+name: mofex
 channels:
   - plotly
   - bioconda
