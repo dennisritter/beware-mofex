@@ -9,3 +9,5 @@ dependencies:
   - pip
   - numpy
   - opencv=4.2.*
+  - networkx=2.2.*
+  - scipy=1.4.*
