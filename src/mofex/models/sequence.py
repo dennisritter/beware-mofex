@@ -3,6 +3,7 @@ import json
 import copy
 import networkx as nx
 import numpy as np
+import cv2
 from scipy.spatial.transform import Rotation
 import mofex.transformations as transformations
 
@@ -140,6 +141,21 @@ class Sequence:
 
         # Start recursive function with root node in our directed scene_graph
         self._calc_scene_graph_transformations_batch(scene_graph, root_node, root_node, positions)
+
+    def _filter_zero_frames(self, positions: np.ndarray) -> list:
+        """Returns a filter mask list to filter frames where all positions equal 0.0.
+
+        Checks whether all coordinates for a frame are 0
+            True -> keep this frame
+            False -> remove this frame
+
+        Args:
+            positions (np.ndarray): The positions to filter "Zero-Position-Frames" from
+
+        Returns:
+            (list<boolean>): The filter list.
+        """
+        return [len(pos) != len(pos[np.all(pos == 0)]) for pos in positions]
 
     def _calc_scene_graph_transformations_batch(self, scene_graph, node, root_node, positions):
         n_frames = len(positions)
@@ -296,7 +312,6 @@ class Sequence:
         }
 
         # Change body part indices according to the target body part format
-        # TODO: Adjust scene graph format to fit optimal kinect azure format
         positions_mka = positions.copy()
         positions[:, 0, :] = positions_mka[:, 26, :]  # "head": 0
         positions[:, 1, :] = positions_mka[:, 3, :]  # "neck": 1
@@ -359,17 +374,31 @@ class Sequence:
 
         return self
 
-    def _filter_zero_frames(self, positions: np.ndarray) -> list:
-        """Returns a filter mask list to filter frames where all positions equal 0.0.
+    def to_motionimg(
+        self,
+        output_size: (int, int) = (200, 200),
+        minmax_pos_x: (int, int) = (-1000, 1000),
+        minmax_pos_y: (int, int) = (-1000, 1000),
+        minmax_pos_z: (int, int) = (-1000, 1000)
+    ) -> np.ndarray:
+        """ Returns a Motion Image, that represents this sequences' positions.
 
-        Checks whether all coordinates for a frame are 0
-            True -> keep this frame
-            False -> remove this frame
+            Creates an Image from 3-D position data of motion sequences.
+            Rows represent a body part (or some arbitrary position instance).
+            Columns represent a frame of the sequence.
 
-        Args:
-            positions (np.ndarray): The positions to filter "Zero-Position-Frames" from
-
-        Returns:
-            (list<boolean>): The filter list.
+            Args:
+                output_size (int, int): The size of the output image in pixels (height, width). Default=(200,200)
+                minmax_pos_x (int, int): The minimum and maximum x-position values. Mapped to color range (0, 255).
+                minmax_pos_y (int, int): The minimum and maximum y-position values. Mapped to color range (0, 255).
+                minmax_pos_z (int, int): The minimum and maximum z-position values. Mapped to color range (0, 255).
         """
-        return [len(pos) != len(pos[np.all(pos == 0)]) for pos in positions]
+        # Create Image container
+        img = np.zeros((len(self.positions[0, :]), len(self.positions), 3), dtype='uint8')
+        # 1. Map (min_pos, max_pos) range to (0, 255) Color range.
+        # 2. Swap Axes of and frames(0) body parts(1) so rows represent body parts and cols represent frames.
+        img[:, :, 0] = np.interp(self.positions[:, :, 0], [minmax_pos_x[0], minmax_pos_x[1]], [0, 255]).swapaxes(0, 1)
+        img[:, :, 1] = np.interp(self.positions[:, :, 1], [minmax_pos_y[0], minmax_pos_y[1]], [0, 255]).swapaxes(0, 1)
+        img[:, :, 2] = np.interp(self.positions[:, :, 2], [minmax_pos_z[0], minmax_pos_z[1]], [0, 255]).swapaxes(0, 1)
+        img = cv2.resize(img, output_size)
+        return img
