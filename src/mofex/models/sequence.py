@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation
 import mofex.transformations as transformations
+import mofex.normalizations as norm
 
 
 # Ignore pylint 'Function redefined warning' as Sequence is imported for pyright
@@ -271,11 +272,6 @@ class Sequence:
         # reshape positions to 3d array
         positions = np.reshape(positions, (np.shape(positions)[0], int(np.shape(positions)[1] / 3), 3))
 
-        # Center Positions by subtracting the mean of each coordinate
-        positions[:, :, 0] -= np.mean(positions[:, :, 0])
-        positions[:, :, 1] -= np.mean(positions[:, :, 1])
-        positions[:, :, 2] -= np.mean(positions[:, :, 2])
-
         # MKA X points left -> HMA X points right
         # MKA Y points down -> HMA Y points front
         # MKA Z points backwards -> HMA Z points up
@@ -331,6 +327,12 @@ class Sequence:
         positions[:, 15, :] = positions_mka[:, 24, :]  # "ankle_r": 15
 
         positions = positions[:, :16]
+
+        # Normalize Skeleton
+        # Center Positions
+        # positions = norm.center_positions(positions)
+        positions = norm.relative_to_root(positions, root_idx=9)
+        norm.orientation_first_pose_frontal_to_camera(positions, hip_l_idx=10, hip_r_idx=11)
 
         return cls(body_parts, positions, timestamps, name=name)
 
