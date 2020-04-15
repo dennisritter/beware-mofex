@@ -331,8 +331,9 @@ class Sequence:
         # Normalize Skeleton
         # Center Positions
         # positions = norm.center_positions(positions)
+        # All Positions relative to root (pelvis)
         positions = norm.relative_to_root(positions, root_idx=9)
-        norm.orientation_first_pose_frontal_to_camera(positions, hip_l_idx=10, hip_r_idx=11)
+        # positions = norm.orientation_first_pose_frontal_to_camera(positions, hip_l_idx=10, hip_r_idx=11)
 
         return cls(body_parts, positions, timestamps, name=name)
 
