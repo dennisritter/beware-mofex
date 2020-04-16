@@ -5,8 +5,8 @@ import networkx as nx
 import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation
-import mofex.transformations as transformations
-import mofex.normalizations as norm
+import mofex.preprocessing.transformations as transformations
+import mofex.preprocessing.normalizations as norm
 
 
 # Ignore pylint 'Function redefined warning' as Sequence is imported for pyright

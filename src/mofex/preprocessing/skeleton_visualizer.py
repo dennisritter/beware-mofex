@@ -1,7 +1,7 @@
 """Visualises a skeleton from a Sequence in a webbrowser 3-D canvas."""
 import plotly.graph_objects as go
 import chart_studio.plotly as py
-import mofex.transformations as transformations
+import mofex.preprocessing.transformations as transformations
 
 
 class SkeletonVisualizer:

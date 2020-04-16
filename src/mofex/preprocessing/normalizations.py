@@ -1,7 +1,7 @@
 """This module contains 3-D transformation function as well as geometric calculations."""
 import math
 import numpy as np
-import mofex.transformations as transformations
+import mofex.preprocessing.transformations as transformations
 import sklearn.preprocessing as preprocessing
 
 
