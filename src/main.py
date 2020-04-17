@@ -49,21 +49,51 @@ feature_vectors = np.array(featvecs_list[1])
 # Get n_gt_featvecs4 random sequences
 n_gt_featvecs = 5
 random_indices = []
+results = {}
 for i in range(n_gt_featvecs):
     random_indices.append(random.randrange(len(feature_vectors)))
-for idx in random_indices:
-    gt_feat = feature_vectors[idx]
-    gt_filename = names[idx]
-    print("------------------------------")
-    print(f"Distances for [{gt_filename}]")
+# for idx in random_indices:
+for q_idx in range(len(feature_vectors)):
+    q_feat = feature_vectors[q_idx]
+    q_filename = names[q_idx]
+    # print("------------------------------")
+    # print(f"Distances for [{q_filename}]")
     distances = []
     for i, test_feat in enumerate(feature_vectors):
-        distance = np.linalg.norm(gt_feat - test_feat)
+        distance = np.linalg.norm(q_feat - test_feat)
         distances.append(distance)
     # Print Top 5 lowest distances (But not the Ground Truth sequence itself)
     dist_top5 = sorted(range(len(distances)), key=lambda i: distances[i])[1:6]
-    for dist_idx in dist_top5:
-        print(f"[{names[dist_idx]}] : {distances[dist_idx]}")
+    # print(f"[{names[dist_idx]}] : {distances[dist_idx]}")
+    top5 = [(names[i], distances[i]) for i in dist_top5]
+    results[names[q_idx]] = top5
+
+classes = [
+    'biceps_curl_left', 'biceps_curl_right', 'knee_lift_left', 'knee_lift_right', 'lunge_left', 'lunge_right', 'overhead_press', 'side_step', 'squat',
+    'triceps_extension_left', 'triceps_extension_right'
+]
+top1_correct = 0
+top1_incorrect = 0
+top5_correct = 0
+top5_incorrect = 0
+for k in results.keys():
+    for class_str in classes:
+        if class_str in k:
+            for r_idx, r in enumerate(results[k]):
+
+                if class_str in r[0]:
+                    top5_correct += 1
+                    if r_idx == 0:
+                        top1_correct += 1
+                else:
+                    top5_incorrect += 1
+                    print(f"Wrong Guess: [rank={r_idx}] {k}, {r}, {class_str}")
+                    if r_idx == 0:
+                        top1_incorrect += 1
+print(f"Top1 Correct [n = {len(results.keys())}] {top1_correct} ({top1_correct / (top1_correct+top1_incorrect)})")
+print(f"Top1 Incorrect [n = {len(results.keys())}] {top1_incorrect} ({top1_incorrect / (top1_correct+top1_incorrect)})")
+print(f"Top5 Correct [n = {len(results.keys()) * 5}] {top5_correct} ({top5_correct / (top5_correct+top5_incorrect)})")
+print(f"Top5 Incorrect [n = {len(results.keys()) * 5}] {top5_incorrect} ({top5_incorrect / (top5_correct+top5_incorrect)})")
 
 ### COMPARE ALL FEATURE VECTORS WITH EACH OTHER
 # for i, gt_feat in enumerate(feature_vectors):
