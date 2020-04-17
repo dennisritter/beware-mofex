@@ -12,14 +12,15 @@ from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.models.resnet as resnet
 import mofex.feature_vectors as featvec
 
-path = 'data/sequences/191024_mir/single/squat/user-1'
+seqs_path = 'data/sequences/191024_mir/single/squat/user-1'
+featvec_path = 'data/feature_vectors/mir-single/resnet18-512.json'
 
-### Load Sequences
-sequences = []
-for filename in Path(path).rglob('*.json'):
-    name = str(filename).split("\\")[-1]
-    print(f"Loading [{filename}]")
-    sequences.append(Sequence.from_mir_file(filename, name=name))
+# ### Load Sequences
+# sequences = []
+# for filename in Path(path).rglob('*.json'):
+#     name = str(filename).split("\\")[-1]
+#     print(f"Loading [{filename}]")
+#     sequences.append(Sequence.from_mir_file(filename, name=name))
 
 ### Specify Model
 model = resnet.load_resnet18(pretrained=True, remove_last_layer=True)
@@ -35,8 +36,14 @@ preprocess = transforms.Compose([
 ])
 model.eval()
 
-# feature_vectors = featvec.load_from_sequences(sequences, model, preprocess)
-# feature_vectors = featvec.load_from_sequences_dir(path, 'mir', model, preprocess)
+# featvecs = featvec.load_from_sequences(sequences, model, preprocess)
+# featvecs = featvec.load_from_sequences_dir(seqs_path, 'mir', model, preprocess)
+featvecs = featvec.load_from_file(featvec_path)
+
+# Make two lists of list<tuples> for feature vectors and corresponding names
+featvecs_list = list(map(list, zip(*featvecs)))
+names = featvecs_list[0]
+feature_vectors = np.array(featvecs_list[1])
 
 # Get x random sequences
 random_indices = []
@@ -44,7 +51,7 @@ for i in range(5):
     random_indices.append(random.randrange(len(feature_vectors)))
 for idx in random_indices:
     gt_feat = feature_vectors[idx]
-    gt_filename = sequences[idx].name
+    gt_filename = names[idx]
     print("------------------------------")
     print(f"Distances for [{gt_filename}]")
     distances = []
@@ -54,7 +61,7 @@ for idx in random_indices:
     # Print Top 5 lowest distances (But not the Ground Truth sequence itself)
     dist_top5 = sorted(range(len(distances)), key=lambda i: distances[i])[1:11]
     for dist_idx in dist_top5:
-        print(f"[{sequences[dist_idx].name}] : {distances[idx]}")
+        print(f"[{names[dist_idx]}] : {distances[idx]}")
 
 ### COMPARE ALL FEATURE VECTORS WITH EACH OTHER
 # for i, gt_feat in enumerate(feature_vectors):

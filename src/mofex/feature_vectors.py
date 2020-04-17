@@ -31,7 +31,7 @@ def load_from_sequences(sequences: list, cnn_model, cnn_preprocess) -> list:
         output = cnn_model(input_batch)
         # ? What exactly happens here?
         output = output.cpu().detach().numpy().reshape((512))
-        feature_vectors.append(output)
+        feature_vectors.append((seq.name, output))
     print(f"Loaded Feature Vectors from [{len(sequences)}] Sequences [{datetime.now() - start}]")
     return feature_vectors
 
@@ -55,7 +55,13 @@ def load_from_sequences_dir(path: str, tracking_type: str, cnn_model, cnn_prepro
 
 
 def load_from_file(path: str) -> list:
-    pass
+    print(f"Loading Feature maps from file [{path}]")
+    with open(Path(path), 'r') as featvec_file:
+        featvec_json_str = featvec_file.read()
+        featvec_dict = json.loads(featvec_json_str)
+    # Converting into list of tuple
+    feature_vectors = [(k, v) for k, v in featvec_dict.items()]
+    return feature_vectors
 
 
 def _motion_img_from_sequence(
