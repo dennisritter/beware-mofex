@@ -45,9 +45,11 @@ featvecs_list = list(map(list, zip(*featvecs)))
 names = featvecs_list[0]
 feature_vectors = np.array(featvecs_list[1])
 
-# Get x random sequences
+### COMPARE FEATVECS DISTANCES
+# Get n_gt_featvecs4 random sequences
+n_gt_featvecs = 5
 random_indices = []
-for i in range(5):
+for i in range(n_gt_featvecs):
     random_indices.append(random.randrange(len(feature_vectors)))
 for idx in random_indices:
     gt_feat = feature_vectors[idx]
@@ -59,9 +61,9 @@ for idx in random_indices:
         distance = np.linalg.norm(gt_feat - test_feat)
         distances.append(distance)
     # Print Top 5 lowest distances (But not the Ground Truth sequence itself)
-    dist_top5 = sorted(range(len(distances)), key=lambda i: distances[i])[1:11]
+    dist_top5 = sorted(range(len(distances)), key=lambda i: distances[i])[1:6]
     for dist_idx in dist_top5:
-        print(f"[{names[dist_idx]}] : {distances[idx]}")
+        print(f"[{names[dist_idx]}] : {distances[dist_idx]}")
 
 ### COMPARE ALL FEATURE VECTORS WITH EACH OTHER
 # for i, gt_feat in enumerate(feature_vectors):
