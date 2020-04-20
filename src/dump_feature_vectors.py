@@ -24,7 +24,7 @@ root = 'data/sequences/191024_mir/single/'
 # Filepath for feature dict
 dump_path = 'data/feature_vectors/mir-single/resnet18-512.json'
 # The CNN Model for Feature Vector generation
-model = resnet.load_resnet18(pretrained=True, remove_last_layer=True)
+model = resnet.load_resnet34(pretrained=True, remove_last_layer=True)
 
 ### Load Sequences
 filenames = []
@@ -78,7 +78,7 @@ for i, name in enumerate(filenames):
     seq_name = str(name).split("\\")[-1]
     filename_featvec_dict[str(seq_name)] = feature_vectors[i].tolist()
 
-path = 'data/feature_vectors/mir-single/resnet18-512.json'
+path = 'data/feature_vectors/mir-single/resnet34-512.json'
 with open(path, 'w') as data_file:
     json.dump(filename_featvec_dict, data_file)
 
