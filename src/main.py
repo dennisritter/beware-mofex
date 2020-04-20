@@ -12,8 +12,8 @@ from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.models.resnet as resnet
 import mofex.feature_vectors as featvec
 
-seqs_path = 'data/sequences/191024_mir/single/squat/user-1'
-featvec_path = 'data/feature_vectors/mir-single/resnet34-512.json'
+# seqs_path = 'data/sequences/191024_mir/single/squat/user-1'
+featvec_path = 'data/feature_vectors/hdm05/resnet18-512-hdm05-c3d-bp44-120hz.json'
 
 # ### Load Sequences
 # sequences = []
@@ -46,8 +46,6 @@ names = featvecs_list[0]
 feature_vectors = np.array(featvecs_list[1])
 
 ### COMPARE FEATVECS DISTANCES
-# Get n_gt_featvecs4 random sequences
-n_gt_featvecs = 5
 results = {}
 # for idx in random_indices:
 for q_idx in range(len(feature_vectors)):
@@ -65,10 +63,13 @@ for q_idx in range(len(feature_vectors)):
     top5 = [(names[i], distances[i]) for i in dist_top5]
     results[names[q_idx]] = top5
 
-classes = [
-    'biceps_curl_left', 'biceps_curl_right', 'knee_lift_left', 'knee_lift_right', 'lunge_left', 'lunge_right', 'overhead_press', 'side_step', 'squat',
-    'triceps_extension_left', 'triceps_extension_right'
-]
+# classes = [
+#     'biceps_curl_left', 'biceps_curl_right', 'knee_lift_left', 'knee_lift_right', 'lunge_left', 'lunge_right', 'overhead_press', 'side_step', 'squat',
+#     'triceps_extension_left', 'triceps_extension_right'
+# ]
+classes = [x[0].split("/")[-1] for x in os.walk('data/sequences/hdm05/c3d/')]
+print(classes)
+
 top1_correct = 0
 top1_incorrect = 0
 for k in results.keys():
