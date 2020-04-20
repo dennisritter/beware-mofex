@@ -23,9 +23,9 @@ from torchvision import transforms
 start = datetime.now()
 
 # Root folder for JSON Sequence files
-path = 'data/sequences/hdm05/c3d/'
+path = 'data/sequences/hdm05-122/c3d/'
 # Filepath for feature dict
-dump_path = 'data/feature_vectors/hdm05/resnet18-512-hdm05-c3d-bp44-120hz.json'
+dump_path = 'data/feature_vectors/hdm05-122/resnet18-512-hdm05-c3d-bp44-120hz.json'
 # The CNN Model for Feature Vector generation
 model = resnet.load_resnet18(pretrained=True, remove_last_layer=True)
 
@@ -68,6 +68,7 @@ for img in motion_images:
         model.to('cuda')
 
     output = model(input_batch)
+    # TODO: Use the models outputshape
     output = output.cpu().detach().numpy().reshape((512))
     feature_vectors.append(output)
 
