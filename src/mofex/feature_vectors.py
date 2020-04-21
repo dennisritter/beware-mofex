@@ -64,32 +64,18 @@ def load_from_file(path: str) -> list:
     return feature_vectors
 
 
-def load_from_3d_positions(positions: 'np.ndarray') -> list:
-    return feature_vectors
+# def load_from_3d_positions(positions: 'np.ndarray') -> list:
+#     return feature_vectors
 
 
-def motion_image_from_3d_positions(
-        positions: 'np.andarray',
-        output_size: (int, int) = (256, 256),
-        minmax_pos_x: (int, int) = (-1000, 1000),
-        minmax_pos_y: (int, int) = (-1000, 1000),
-        minmax_pos_z: (int, int) = (-1000, 1000),
-        name: str = 'Motion Image',
-        show_img: bool = False,
-) -> np.ndarray:
-    # TODO: Calculate 'smart' minmax_pos values
-    """ Returns a Motion Image, that represents this sequences' positions.
-
-            Creates an Image from 3-D position data of motion sequences.
-            Rows represent a body part (or some arbitrary position instance).
-            Columns represent a frame of the sequence.
-
-            Args:
-                output_size (int, int): The size of the output image in pixels (height, width). Default=(200,200)
-                minmax_pos_x (int, int): The minimum and maximum x-position values. Mapped to color range (0, 255).
-                minmax_pos_y (int, int): The minimum and maximum y-position values. Mapped to color range (0, 255).
-                minmax_pos_z (int, int): The minimum and maximum z-position values. Mapped to color range (0, 255).
-        """
+# TODO: Calculate 'smart' minmax_pos values
+def motion_image_from_3d_positions(positions: 'np.ndarray',
+                                   output_size: (int, int) = (256, 256),
+                                   minmax_pos_x: (int, int) = (-1000, 1000),
+                                   minmax_pos_y: (int, int) = (-1000, 1000),
+                                   minmax_pos_z: (int, int) = (-1000, 1000),
+                                   name: str = 'Motion Image',
+                                   show_img: bool = False) -> 'np.ndarray':
     # Create Image container
     img = np.zeros((len(positions[0, :]), len(positions), 3), dtype='uint8')
     # 1. Map (min_pos, max_pos) range to (0, 255) Color range.
@@ -99,7 +85,7 @@ def motion_image_from_3d_positions(
     img[:, :, 2] = np.interp(positions[:, :, 2], [minmax_pos_z[0], minmax_pos_z[1]], [0, 255]).swapaxes(0, 1)
     img = cv2.resize(img, output_size)
     if show_img:
-        cv2.imshow('motion image', img)
+        cv2.imshow(name, img)
         print(f"Showing motion image from [{name}]. Press any key to close the image and continue.")
         cv2.waitKey(0)
         cv2.destroyAllWindows()
@@ -112,6 +98,18 @@ def _motion_img_from_sequence(
     show_img: bool = False,
     show_skeleton: bool = False,
 ):
+    """ Returns a Motion Image, that represents this sequences' positions.
+
+        Creates an Image from 3-D position data of motion sequences.
+        Rows represent a body part (or some arbitrary position instance).
+        Columns represent a frame of the sequence.
+
+        Args:
+            output_size (int, int): The size of the output image in pixels (height, width). Default=(200,200)
+            minmax_pos_x (int, int): The minimum and maximum x-position values. Mapped to color range (0, 255).
+            minmax_pos_y (int, int): The minimum and maximum y-position values. Mapped to color range (0, 255).
+            minmax_pos_z (int, int): The minimum and maximum z-position values. Mapped to color range (0, 255).
+    """
     img = seq.to_motionimg(output_size=output_size)
     if show_img:
         cv2.imshow(seq.name, img)

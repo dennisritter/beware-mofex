@@ -259,4 +259,5 @@ TAGS
 ### CUSTOM
 data/sequences/*
 data/feature_vectors/*
+data/motion_images/*
 skeleton.html
