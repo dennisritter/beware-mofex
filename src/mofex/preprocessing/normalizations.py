@@ -26,9 +26,24 @@ def relative_to_root(positions: 'np.ndarray', root_idx: int) -> 'np.ndarray':
             root_idx (int): The body part(dim=1) index of the skeletons' root joint.
     """
     # Store copy of slice to prevent subtracting the normalized root positions (which is 0,0,0 after the subtraction)
-    original_root_position = np.copy(positions[0, root_idx])
+    root_positions = np.copy(positions[:, root_idx, :])
     for bp_idx in range(positions.shape[1]):
-        positions[:, bp_idx] -= original_root_position
+        positions[:, bp_idx, :] -= root_positions
+
+    return positions
+
+
+def relative_to_positions(positions: 'np.ndarray', root_positions: 'np.ndarray') -> 'np.ndarray':
+    """ Subtracts the mean of all positions from the given positions for each axis respectively. Returns the resulting positions.
+
+        Args: 
+            positions (np.ndarray): Positions of a motion sequence of shape  (n_frames, n_body_parts, 3).
+            root_position (np.ndarray): An array of 3-D points, whose center represents the root position 0,0,0 (shape: (n_frames, 3))
+    """
+
+    for bp_idx in range(positions.shape[1]):
+        positions[:, bp_idx, :] -= root_positions
+
     return positions
 
 

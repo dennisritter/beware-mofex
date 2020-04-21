@@ -1,10 +1,10 @@
 """Contains the code for the sequence model including the scenegraph and angle computation."""
 import json
 import copy
-import networkx as nx
 import numpy as np
 import cv2
-from scipy.spatial.transform import Rotation
+from ezc3d import c3d
+from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.preprocessing.transformations as transformations
 import mofex.preprocessing.normalizations as norm
 
@@ -15,11 +15,8 @@ class Sequence:
     """Represents a motion sequence.
 
     Attributes:
-        body_parts (dict): A dictionary mapping body part names to position indices in the "positions" attribute array.
         positions (list): The tracked body part positions for each frame.
-        timestamps (list): The timestamps for each tracked frame.
         name (str): The name of this sequence.
-        scene_graph (networkx.DiGraph): A Directed Graph defining the hierarchy between body parts that will be filled with related data.
     """
     def __init__(self, positions: np.ndarray, name: str = 'sequence'):
         self.name = name
@@ -35,7 +32,7 @@ class Sequence:
         #           ...
         #          ]
         # shape: (num_body_parts, num_keypoints, xyz)
-        self.positions = self._get_pelvis_cs_positions(np.array(positions)[zero_frames_filter_list])
+        self.positions = np.array(positions)[zero_frames_filter_list]
 
     def __len__(self) -> int:
         return len(self.positions)
@@ -222,9 +219,24 @@ class Sequence:
         # Center Positions
         # positions = norm.center_positions(positions)
         # All Positions relative to root (pelvis)
-        positions = norm.relative_to_root(positions, root_idx=0)
+        # positions = norm.relative_to_root(positions, root_idx=0)
         # positions = norm.orientation_first_pose_frontal_to_camera(positions, hip_l_idx=10, hip_r_idx=11)
 
+        return cls(positions, name=name)
+
+    @classmethod
+    def from_hdm05_c3d_file(cls, path: str, name: str = 'Sequence') -> 'Sequence':
+        """Loads the Positions of the a .c3d file and returns an Sequence object.
+
+        Args:
+            path (str): Path to the c3d file
+
+        Returns:
+            Sequence: a new Sequence instance from the given input.
+        """
+        c3d_object = c3d(str(path))
+        positions = c3d_object['data']['points']
+        positions = positions.swapaxes(0, 2)[:, :, :3]
         return cls(positions, name=name)
 
     def merge(self, sequence) -> 'Sequence':
@@ -243,11 +255,13 @@ class Sequence:
         return self
 
     def to_motionimg(
-        self,
-        output_size: (int, int) = (256, 256),
-        minmax_pos_x: (int, int) = (-1000, 1000),
-        minmax_pos_y: (int, int) = (-1000, 1000),
-        minmax_pos_z: (int, int) = (-1000, 1000)
+            self,
+            output_size: (int, int) = (256, 256),
+            minmax_pos_x: (int, int) = (-1000, 1000),
+            minmax_pos_y: (int, int) = (-1000, 1000),
+            minmax_pos_z: (int, int) = (-1000, 1000),
+            show_img=False,
+            show_skeleton=False,
     ) -> np.ndarray:
         # TODO: Calculate 'smart' minmax_pos values
         """ Returns a Motion Image, that represents this sequences' positions.
@@ -270,4 +284,29 @@ class Sequence:
         img[:, :, 1] = np.interp(self.positions[:, :, 1], [minmax_pos_y[0], minmax_pos_y[1]], [0, 255]).swapaxes(0, 1)
         img[:, :, 2] = np.interp(self.positions[:, :, 2], [minmax_pos_z[0], minmax_pos_z[1]], [0, 255]).swapaxes(0, 1)
         img = cv2.resize(img, output_size)
+
+        if show_img:
+            cv2.imshow(self.name, img)
+            print(f"Showing motion image from [{self.name}]. Press any key to close the image and continue.")
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+        if show_skeleton:
+            sv = SkeletonVisualizer(self)
+            sv.show()
         return img
+
+    def norm_center_positions(self):
+        self.positions = norm.center_positions(self.positions)
+        return
+
+    def norm_relative_to_position_idx(self, position_idx):
+        self.positions = norm.relative_to_root(self.positions, root_idx=position_idx)
+        return
+
+    def norm_relative_to_positions(self, positions):
+        self.positions = norm.relative_to_positions(self.positions, root_positions=positions)
+        return
+
+    def norm_orientation_first_pose_frontal_to_camera(self, hip_l_idx, hip_r_idx):
+        self.positions = norm.orientation_first_pose_frontal_to_camera(self.positions, hip_l_idx, hip_r_idx)
+        return

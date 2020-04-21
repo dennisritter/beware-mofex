@@ -14,12 +14,16 @@ import torch
 from torchvision import transforms
 
 
-def load_from_sequences(sequences: list, cnn_model, cnn_preprocess) -> list:
+def load_from_sequences(sequences: list, cnn_model, cnn_preprocess, cnn_output_size=512) -> list:
     start = datetime.now()
     feature_vectors = []
 
+    cnn_model.eval()
+    if torch.cuda.is_available():
+        input_batch = cnn_model.to('cuda')
+
     for seq in sequences:
-        motion_img = _motion_img_from_sequence(seq)
+        motion_img = seq.to_motionimg(show_img=False, show_skeleton=False)
         # ? What exactly happens here?
         input_tensor = cnn_preprocess(motion_img)
         # ? What exactly happens here?
@@ -30,8 +34,8 @@ def load_from_sequences(sequences: list, cnn_model, cnn_preprocess) -> list:
 
         output = cnn_model(input_batch)
         # ? What exactly happens here?
-        output = output.cpu().detach().numpy().reshape((512))
-        feature_vectors.append((seq.name, output))
+        output = output.cpu().detach().numpy().reshape((cnn_output_size))
+        feature_vectors.append(output)
     print(f"Loaded Feature Vectors from [{len(sequences)}] Sequences [{datetime.now() - start}]")
     return feature_vectors
 
@@ -48,6 +52,8 @@ def load_from_sequences_dir(path: str, tracking_type: str, cnn_model, cnn_prepro
             sequences.append(Sequence.from_mir_file(filename, name=name))
         elif tracking_type.lower() == 'mka':
             sequences.append(Sequence.from_mka_file(filename, name=name))
+        elif tracking_type.lower() == 'hdm05':
+            sequences.append(Sequence.from_hdm05_c3d_file(filename, name=name))
         else:
             print(f"Tracking Type: [{tracking_type}] is not supported.")
             return
@@ -62,61 +68,3 @@ def load_from_file(path: str) -> list:
     # Converting into list of tuple
     feature_vectors = [(k, v) for k, v in featvec_dict.items()]
     return feature_vectors
-
-
-# def load_from_3d_positions(positions: 'np.ndarray') -> list:
-#     return feature_vectors
-
-
-# TODO: Calculate 'smart' minmax_pos values
-def motion_image_from_3d_positions(positions: 'np.ndarray',
-                                   output_size: (int, int) = (256, 256),
-                                   minmax_pos_x: (int, int) = (-1000, 1000),
-                                   minmax_pos_y: (int, int) = (-1000, 1000),
-                                   minmax_pos_z: (int, int) = (-1000, 1000),
-                                   name: str = 'Motion Image',
-                                   show_img: bool = False) -> 'np.ndarray':
-    # Create Image container
-    img = np.zeros((len(positions[0, :]), len(positions), 3), dtype='uint8')
-    # 1. Map (min_pos, max_pos) range to (0, 255) Color range.
-    # 2. Swap Axes of and frames(0) body parts(1) so rows represent body parts and cols represent frames.
-    img[:, :, 0] = np.interp(positions[:, :, 0], [minmax_pos_x[0], minmax_pos_x[1]], [0, 255]).swapaxes(0, 1)
-    img[:, :, 1] = np.interp(positions[:, :, 1], [minmax_pos_y[0], minmax_pos_y[1]], [0, 255]).swapaxes(0, 1)
-    img[:, :, 2] = np.interp(positions[:, :, 2], [minmax_pos_z[0], minmax_pos_z[1]], [0, 255]).swapaxes(0, 1)
-    img = cv2.resize(img, output_size)
-    if show_img:
-        cv2.imshow(name, img)
-        print(f"Showing motion image from [{name}]. Press any key to close the image and continue.")
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    return img
-
-
-def _motion_img_from_sequence(
-    seq: 'Sequence',
-    output_size: tuple = (256, 256),
-    show_img: bool = False,
-    show_skeleton: bool = False,
-):
-    """ Returns a Motion Image, that represents this sequences' positions.
-
-        Creates an Image from 3-D position data of motion sequences.
-        Rows represent a body part (or some arbitrary position instance).
-        Columns represent a frame of the sequence.
-
-        Args:
-            output_size (int, int): The size of the output image in pixels (height, width). Default=(200,200)
-            minmax_pos_x (int, int): The minimum and maximum x-position values. Mapped to color range (0, 255).
-            minmax_pos_y (int, int): The minimum and maximum y-position values. Mapped to color range (0, 255).
-            minmax_pos_z (int, int): The minimum and maximum z-position values. Mapped to color range (0, 255).
-    """
-    img = seq.to_motionimg(output_size=output_size)
-    if show_img:
-        cv2.imshow(seq.name, img)
-        print(f"Showing motion image from [{seq.name}]. Press any key to close the image and continue.")
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    if show_skeleton:
-        sv = SkeletonVisualizer(seq)
-        sv.show()
-    return img

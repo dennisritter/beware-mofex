@@ -15,7 +15,7 @@ import mofex.feature_vectors as featvec
 # seqs_path = 'data/sequences/191024_mir/single/squat/user-1'
 # featvec_path = 'data/feature_vectors/hdm05/resnet101-2048-hdm05-c3d-bp44-120hz.json'
 
-featvec_path = 'data/feature_vectors/hdm05-122/resnet18-512-hdm05-c3d-bp44-120hz.json'
+featvec_path = 'data/feature_vectors/hdm05-122/resnet18-512-hdm05-c3d-bp44-120hz__2.json'
 
 # ### Load Sequences
 # sequences = []
@@ -25,18 +25,18 @@ featvec_path = 'data/feature_vectors/hdm05-122/resnet18-512-hdm05-c3d-bp44-120hz
 #     sequences.append(Sequence.from_mir_file(filename, name=name))
 
 ### Specify Model
-model = resnet.load_resnet18(pretrained=True, remove_last_layer=True)
-if torch.cuda.is_available():
-    model.to('cuda')
-### Specify Input Image Preprocessing
-preprocess = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize(256),
-    transforms.CenterCrop(256),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
-model.eval()
+# model = resnet.load_resnet18(pretrained=True, remove_last_layer=True)
+# if torch.cuda.is_available():
+#     model.to('cuda')
+# ### Specify Input Image Preprocessing
+# preprocess = transforms.Compose([
+#     transforms.ToPILImage(),
+#     transforms.Resize(256),
+#     transforms.CenterCrop(256),
+#     transforms.ToTensor(),
+#     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+# ])
+# model.eval()
 
 # featvecs = featvec.load_from_sequences(sequences, model, preprocess)
 # featvecs = featvec.load_from_sequences_dir(seqs_path, 'mir', model, preprocess)
@@ -49,28 +49,25 @@ feature_vectors = np.array(featvecs_list[1])
 
 ### COMPARE FEATVECS DISTANCES
 results = {}
-# for idx in random_indices:
 for q_idx in range(len(feature_vectors)):
     q_feat = feature_vectors[q_idx]
     q_filename = names[q_idx]
-    # print("------------------------------")
-    # print(f"Distances for [{q_filename}]")
     distances = []
     for i, test_feat in enumerate(feature_vectors):
         distance = np.linalg.norm(q_feat - test_feat)
         distances.append(distance)
-    # Print Top 5 lowest distances (But not the Ground Truth sequence itself)
-    dist_top5 = sorted(range(len(distances)), key=lambda i: distances[i])[1:6]
-    # print(f"[{names[dist_idx]}] : {distances[dist_idx]}")
-    top5 = [(names[i], distances[i]) for i in dist_top5]
-    results[names[q_idx]] = top5
+    dist_top1 = sorted(range(len(distances)), key=lambda i: distances[i])[1]
+    # dist_top5 = sorted(range(len(distances)), key=lambda i: distances[i])[1:6]
+    # top5 = [(names[i], distances[i]) for i in dist_top5]
+    top1 = [(names[i], distances[i]) for i in [dist_top1]]
+    results[names[q_idx]] = top1
 
+### EVALUATE MATCHING PERFORMANCE
 # classes = [
 #     'biceps_curl_left', 'biceps_curl_right', 'knee_lift_left', 'knee_lift_right', 'lunge_left', 'lunge_right', 'overhead_press', 'side_step', 'squat',
 #     'triceps_extension_left', 'triceps_extension_right'
 # ]
 classes = [x[0].split("/")[-1] for x in os.walk('data/sequences/hdm05-122/c3d/')]
-print(classes)
 
 top1_correct = 0
 top1_incorrect = 0

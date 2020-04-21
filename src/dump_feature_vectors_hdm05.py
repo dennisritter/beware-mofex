@@ -23,29 +23,11 @@ from torchvision import transforms
 start = datetime.now()
 
 # Root folder for JSON Sequence files
-path = 'data/sequences/hdm05-122/c3d/'
+sequences_path = 'data/sequences/hdm05-122/c3d/'
 # Filepath for feature dict
-dump_path = 'data/feature_vectors/hdm05-122/resnet18-512-hdm05-c3d-bp44-120hz.json'
+dump_path = 'data/feature_vectors/hdm05-122/resnet18-512-hdm05-c3d-bp44-120hz__2.json'
 # The CNN Model for Feature Vector generation
 model = resnet.load_resnet18(pretrained=True, remove_last_layer=True)
-
-### Load Sequences
-filenames = []
-motion_images = []
-for filename in Path(path).rglob('*.C3D'):
-    name = str(filename).split("\\")[-1]
-    filenames.append(filename)
-    # with open(filename, 'rb') as handle:
-    print(f"Loading [{filename}]")
-    c3d_object = c3d(str(filename))
-    positions = c3d_object['data']['points']
-    positions = positions.swapaxes(0, 2)[:, :, :3]
-    positions = norm.center_positions(positions)
-    motion_images.append(featvec.motion_image_from_3d_positions(positions, name=name, show_img=False))
-
-print(f"Created Motion Images: {datetime.now() - start}")
-### Get feature Vectors from CNN
-
 preprocess = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize(256),
@@ -54,34 +36,23 @@ preprocess = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-feature_vectors = []
-for img in motion_images:
-    model.eval()
-    img_tensor = torch.from_numpy(img)
+### Load Sequences
+sequences = []
+for filename in Path(sequences_path).rglob('*.C3D'):
+    print(f"Loading [{filename}]")
+    seq = Sequence.from_hdm05_c3d_file(path=filename, name=str(filename).split("\\")[-1])
+    # The point in between hip_l and hip_r in HDM05 C3D files (44 tracked points/frame)
+    seq.norm_relative_to_positions((seq.positions[:, 30, :] + seq.positions[:, 37, :]) * 0.5)
+    sequences.append(seq)
 
-    input_tensor = preprocess(img)
-    input_batch = input_tensor.unsqueeze(0)  # create a mini-batch as expected by the model
-
-    # move the input and model to GPU for speed if available
-    if torch.cuda.is_available():
-        input_batch = input_batch.to('cuda')
-        model.to('cuda')
-
-    output = model(input_batch)
-    # TODO: Use the models outputshape
-    output = output.cpu().detach().numpy().reshape((512))
-    feature_vectors.append(output)
-
+feature_vectors = featvec.load_from_sequences(sequences, model, preprocess, 512)
 print(f"Created Feature Vectors: {datetime.now() - start}")
 
 ### Store feature vectors in file
 filename_featvec_dict = {}
-for i, name in enumerate(filenames):
-    seq_name = str(name).split("\\")[-1]
-    filename_featvec_dict[str(seq_name)] = feature_vectors[i].tolist()
-
-path = dump_path
-with open(path, 'w') as data_file:
+for i, seq in enumerate(sequences):
+    filename_featvec_dict[seq.name] = feature_vectors[i].tolist()
+with open(dump_path, 'w') as data_file:
     json.dump(filename_featvec_dict, data_file)
 
 print(f"Runtime of script: {datetime.now() - start}")
