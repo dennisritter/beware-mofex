@@ -22,7 +22,7 @@ start = datetime.now()
 
 # Root folder for JSON Sequence files
 # root = 'data/sequences/hdm05-122/c3d'
-root = 'data/sequences/hdm05-10/c3d'
+root = 'data/sequences/hdm05-122/c3d'
 
 ### Load Sequences
 filenames = []
