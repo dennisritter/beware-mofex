@@ -11,6 +11,7 @@ from mofex.preprocessing.sequence import Sequence
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.models.resnet as resnet
 import torch
+import torch
 from torchvision import transforms
 
 
@@ -20,7 +21,7 @@ def load_from_sequences(sequences: list, cnn_model, cnn_preprocess, cnn_output_s
 
     cnn_model.eval()
     if torch.cuda.is_available():
-        input_batch = cnn_model.to('cuda')
+        cnn_model = cnn_model.to('cuda')
 
     for seq in sequences:
         motion_img = seq.to_motionimg(show_img=False, show_skeleton=False)
