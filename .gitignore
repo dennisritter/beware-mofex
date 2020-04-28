@@ -257,7 +257,5 @@ TAGS
 .clangd/
 
 ### CUSTOM
-data/sequences/*
-data/feature_vectors/*
-data/motion_images/*
+data/*
 skeleton.html

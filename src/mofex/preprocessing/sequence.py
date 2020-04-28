@@ -18,7 +18,7 @@ class Sequence:
         positions (list): The tracked body part positions for each frame.
         name (str): The name of this sequence.
     """
-    def __init__(self, positions: np.ndarray, name: str = 'sequence'):
+    def __init__(self, positions: np.ndarray, name: str = 'sequence', desc: str = None):
         self.name = name
         # A Boolean mask list to exclude all frames, where all positions are 0.0
         zero_frames_filter_list = self._filter_zero_frames(positions)
@@ -33,6 +33,8 @@ class Sequence:
         #          ]
         # shape: (num_body_parts, num_keypoints, xyz)
         self.positions = np.array(positions)[zero_frames_filter_list]
+        # Description of the sequence. (used for class identification)
+        self.desc = desc
 
     def __len__(self) -> int:
         return len(self.positions)
@@ -59,7 +61,7 @@ class Sequence:
         else:
             raise TypeError(f"Invalid argument type: {type(item)}")
 
-        return Sequence(self.positions[start:stop:step], self.name)
+        return Sequence(self.positions[start:stop:step], self.name, self.desc)
 
     def _filter_zero_frames(self, positions: np.ndarray) -> list:
         """Returns a filter mask list to filter frames where all positions equal 0.0.
@@ -77,7 +79,7 @@ class Sequence:
         return [len(pos) != len(pos[np.all(pos == 0)]) for pos in positions]
 
     @classmethod
-    def from_mir_file(cls, path: str, name: str = 'Sequence') -> 'Sequence':
+    def from_mir_file(cls, path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
         """Loads an sequence .json file in Mocap Intel RealSense format and returns an Sequence object.
 
         Args:
@@ -90,7 +92,7 @@ class Sequence:
             return Sequence.from_mir_json(sequence_file.read(), name)
 
     @classmethod
-    def from_mir_json(cls, json_str: str, name: str = 'Sequence') -> 'Sequence':
+    def from_mir_json(cls, json_str: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
         """Loads an sequence from a json string in Mocap Intel RealSense format and returns an Sequence object.
 
         Args:
@@ -147,7 +149,7 @@ class Sequence:
         # positions[:, 14, :] = positions_mocap[:, 6, :]  # "ankle_l": 14
         # positions[:, 15, :] = positions_mocap[:, 9, :]  # "ankle_r": 15
 
-        return cls(positions, name=name)
+        return cls(positions, name=name, desc=desc)
 
     @classmethod
     def from_mka_file(cls, path: str, name: str = 'Sequence') -> 'Sequence':
@@ -222,10 +224,10 @@ class Sequence:
         # positions = norm.relative_to_root(positions, root_idx=0)
         # positions = norm.orientation_first_pose_frontal_to_camera(positions, hip_l_idx=10, hip_r_idx=11)
 
-        return cls(positions, name=name)
+        return cls(positions, name=name, desc=desc)
 
     @classmethod
-    def from_hdm05_c3d_file(cls, path: str, name: str = 'Sequence') -> 'Sequence':
+    def from_hdm05_c3d_file(cls, path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
         """Loads the Positions of the a .c3d file and returns an Sequence object.
 
         Args:
@@ -237,7 +239,7 @@ class Sequence:
         c3d_object = c3d(str(path))
         positions = c3d_object['data']['points']
         positions = positions.swapaxes(0, 2)[:, :, :3]
-        return cls(positions, name=name)
+        return cls(positions, name=name, desc=desc)
 
     def merge(self, sequence) -> 'Sequence':
         """Returns the merged two sequences.
