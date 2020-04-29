@@ -1,3 +1,4 @@
+""" Loads Models with the desired parameter properties. """
 import torch
 import torch.nn as nn
 import mofex.models.resnet as resnet
@@ -12,8 +13,6 @@ def initialize_model(model_name, num_classes, input_size=256, feature_extract=Fa
             feature_extract (Boolean): Decides whether to freeze all but the last layer (True) or train all layers (False).
             pretrained (Boolean): Decides whether to load a pretrained model or give birth to a new one. 
     """
-    # Initialize these variables which will be set in this if statement. Each of these
-    #   variables is model specific.
     model = None
     if model_name == "resnet18":
         model = resnet.load_resnet18()
