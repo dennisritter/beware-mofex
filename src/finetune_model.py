@@ -11,82 +11,36 @@ import time
 import os
 import copy
 import mofex.models.resnet as resnet
-print("PyTorch Version: ", torch.__version__)
-print("Torchvision Version: ", torchvision.__version__)
+import mofex.model_loader as model_loader
 
 
-def initialize_model(model_name, num_classes, feature_extract, pretrained=True):
-    # Initialize these variables which will be set in this if statement. Each of these
-    #   variables is model specific.
-    model_ft = None
-    input_size = 0
-    if model_name == "resnet18":
-        model = resnet.load_resnet18(pretrained=True, remove_last_layer=False)
-        # Replace last layer for finetuning with set output dimension
-        model_ft = models.resnet18(pretrained=pretrained)
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 256
-    elif model_name == "resnet50":
-        model_ft = resnet.load_resnet50(pretrained=True, remove_last_layer=False)
-        # Replace last layer for finetuning with set output dimension
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 256
-    elif model_name == "resnet101":
-        model_ft = resnet.load_resnet101(pretrained=True, remove_last_layer=False)
-        # Replace last layer for finetuning with set output dimension
-        set_parameter_requires_grad(model_ft, feature_extract)
-        num_ftrs = model_ft.fc.in_features
-        model_ft.fc = nn.Linear(num_ftrs, num_classes)
-        input_size = 256
+def save_model(model, save_dir, model_name, num_epoch):
+    """ Saves a models state to disc.
 
-    else:
-        print("Invalid model name, exiting...")
-        exit()
-
-    return model_ft, input_size
-
-
-def save_model(model, save_dir, model_name, epoch):
+        Args:
+            model:  nn model
+            save_dir: save model direction
+            model_name:  model name
+            epoch:  epoch
     """
-    :param model:  nn model
-    :param save_dir: save model direction
-    :param model_name:  model name
-    :param epoch:  epoch
-    :return:  None
-    """
+    # Create Folder(s) in path if doesn't exist already
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
     save_prefix = os.path.join(save_dir, model_name)
-    save_path = '{}_e{}.pt'.format(save_prefix, epoch)
-    print("save all model to {}".format(save_path))
-    output = open(save_path, mode="wb")
-    torch.save(model.state_dict(), output)
-    # torch.save(model.state_dict(), save_path)
-    output.close()
+    save_path = f'{save_prefix}_e{num_epoch}.pt'
+    print(f'Saving model state to: {save_path}')
+    output_path = open(save_path, mode="wb")
+    torch.save(model.state_dict(), output_path)
+    output_path.close()
 
 
-def set_parameter_requires_grad(model, feature_extracting):
-    if feature_extracting:
-        for param in model.parameters():
-            param.requires_grad = False
-
-
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
+def train_model(model, dataloaders, criterion, optimizer, num_epochs):
     since = time.time()
 
     val_acc_history = []
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
-
-    # TODO: Remove?
-    # Use GPU if cuda available. Else use CPU
-    # device = 'cuda' if torch.cuda.is_available() else torch.cuda.current_device()
-    # model.to(device)
 
     for epoch in range(num_epochs):
         print(f'Epoch {epoch}/{num_epochs-1}')
@@ -142,8 +96,6 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
             if phase == 'val':
                 val_acc_history.append(epoch_acc)
 
-        print()
-
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
@@ -156,26 +108,22 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
 # Top level data directory. Here we assume the format of the directory conforms
 #   to the ImageFolder structure
 data_dir = "./data/motion_images/hdm05-122"
-
 # Models to choose from [resnet18, resnet34, resnet50, resnet101]
-model_name = 'resnet18'
-
+model_name = 'resnet101'
 # Number of classes in the dataset
 num_classes = 122
-
 # Batch size for training (change depending on how much memory you have)
 batch_size = 8
-
 # Number of epochs to train for
-num_epochs = 25
-
+num_epochs = 10
 # Flag for feature extracting. When False, we finetune the whole model,
 #   when True we only update the reshaped layer params
+# * We need to pretrain the full model in order to extract features from the finetuned model later
 feature_extract = False
 
 ### RUN
 # Initialize the model for this run
-model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, pretrained=True)
+model_ft, input_size = model_loader.initialize_model(model_name, num_classes)
 
 # Print the model we just instantiated
 print(model_ft)
@@ -234,7 +182,7 @@ criterion = nn.CrossEntropyLoss()
 # Train and evaluate
 model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs)
 # TODO!
-save_model(model_ft, 'C:/Users/dritter/projects/mofex-mocap-feature-extractor/data/trained_models', 'resnet18', 100)
+save_model(model_ft, 'C:/Users/dritter/projects/mofex-mocap-feature-extractor/data/trained_models', 'resnet50', 10)
 
 # Plot the training curves of validation accuracy vs. number
 #  of training epochs for the transfer learning method and
