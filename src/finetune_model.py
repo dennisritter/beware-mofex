@@ -20,7 +20,7 @@ import mofex.model_trainer as model_trainer
 # ----- Training Parameters
 
 # Models to choose from [resnet18, resnet50, resnet101]
-model_name = 'resnet18'
+model_name = 'resnet101'
 # Dataset name. Choose from [hdm05-122]
 dataset_name = 'hdm05-122'
 # Top level data directory. Here we assume the format of the directory conforms to the ImageFolder structure
@@ -28,7 +28,7 @@ data_dir = "./data/motion_images/hdm05-122"
 # Number of classes in the dataset
 num_classes = 122
 # Number of epochs to train for
-num_epochs = 1
+num_epochs = 10
 # Batch size for training (change depending on how much memory you have)
 batch_size = 8
 # Flag for feature extracting. When False, we finetune the whole model,
@@ -78,4 +78,4 @@ trained_models_path = Path(f'./data/trained_models/{dataset_name}').resolve()
 model_saver.save_model(model, trained_models_path, model_name, dataset_name, num_epoch=num_epochs)
 # Plot the training curves of validation accuracy vs. number of epochs
 val_acc_history = [acc.cpu().numpy() for acc in val_acc_history]
-model_plotter.plot_val_acc_on_batch(val_acc_history, model_name, dataset_name, path=trained_models_path, num_pretrained_epochs=0, show=True, save=True)
+model_plotter.plot_val_acc_on_batch(val_acc_history, model_name, dataset_name, path=trained_models_path, num_pretrained_epochs=0, show=False, save=True)
