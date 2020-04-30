@@ -37,6 +37,16 @@ def initialize_model(model_name, num_classes, input_size=256, feature_extract=Fa
     return model, input_size
 
 
+def load_trained_model(model_name, remove_last_layer=True, state_dict_path='./data/trained_models/hdm05-122/resnet18_hdm05-122_e10.pt'):
+    model = None
+    if model_name == "resnet18_hdm05-122_50-50":
+        model = resnet.load_resnet18_finetuned_hdm05_122(state_dict_path=state_dict_path)
+    else:
+        print("Invalid model name, exiting...")
+        exit()
+    return model
+
+
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
         for param in model.parameters():

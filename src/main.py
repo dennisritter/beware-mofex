@@ -15,7 +15,8 @@ import mofex.feature_vectors as featvec
 # seqs_path = 'data/sequences/191024_mir/single/squat/user-1'
 # featvec_path = 'data/feature_vectors/hdm05/resnet101-2048-hdm05-c3d-bp44-120hz.json'
 
-featvec_path = 'data/feature_vectors/hdm05-122/resnet18-512-hdm05-c3d-bp44-120hz__2.json'
+featvec_path = 'data/feature_vectors/hdm05-122/resnet18-512_hdm05-122_50-50-e10.json'
+# featvec_path = 'data/feature_vectors/hdm05-122/resnet18-512_hdm05-122_imagenet_only.json'
 
 # ### Load Sequences
 # sequences = []
@@ -67,20 +68,17 @@ for q_idx in range(len(feature_vectors)):
 #     'biceps_curl_left', 'biceps_curl_right', 'knee_lift_left', 'knee_lift_right', 'lunge_left', 'lunge_right', 'overhead_press', 'side_step', 'squat',
 #     'triceps_extension_left', 'triceps_extension_right'
 # ]
-classes = [x[0].split("/")[-1] for x in os.walk('data/sequences/hdm05-122/c3d/')]
+classes = [x[0].split("/")[-1] for x in os.walk('data/motion_images/hdm05-122/val/')]
 
 top1_correct = 0
 top1_incorrect = 0
 for k in results.keys():
     for class_str in classes:
-        if class_str in k:
-            for r_idx, r in enumerate(results[k]):
-                if class_str in r[0]:
-                    if r_idx == 0:
-                        top1_correct += 1
-                else:
-                    print(f"Wrong Guess: [rank={r_idx}] {k}, {r}, {class_str}")
-                    if r_idx == 0:
-                        top1_incorrect += 1
+        if class_str in k and class_str != '':
+            if class_str in results[k][0][0]:
+                top1_correct += 1
+            else:
+                print(f"Wrong Guess: [{k}, {results[k]}, {class_str}")
+                top1_incorrect += 1
 print(f"Top1 Correct [n = {len(results.keys())}] {top1_correct} ({top1_correct / (top1_correct+top1_incorrect)})")
 print(f"Top1 Incorrect [n = {len(results.keys())}] {top1_incorrect} ({top1_incorrect / (top1_correct+top1_incorrect)})")
