@@ -14,7 +14,8 @@ import mofex.model_loader as model_loader
 import mofex.feature_vectors as feature_vectors
 
 # ----- Params
-# Root folder of motion images. Make sure it includes 'train' and 'val' folder
+# ! Root directory of motion images. Make sure it includes 'train' and 'val' directory, which then include a directory for each present label in the dataset.
+# ! Structure template: <in_path>/train/<class_name>/motion_img1.png
 in_path = 'data/motion_images/hdm05-122'
 # CNN Model name -> model_dataset-numclasses_train-val-ratio
 model_name = 'resnet18_hdm05-122_50-50'

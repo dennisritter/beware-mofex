@@ -67,7 +67,7 @@ def load_from_file(path: str) -> list:
         featvec_json_str = featvec_file.read()
         featvec_dict = json.loads(featvec_json_str)
     # Converting into list of tuple
-    feature_vectors = [(k, v) for k, v in featvec_dict.items()]
+    feature_vectors = [(k, v[0], v[1]) for k, v in featvec_dict.items()]
     return feature_vectors
 
 
@@ -96,13 +96,17 @@ def dump_from_motion_images_train_val(in_path, model, model_name, feature_size, 
         # ----- Actual Functionality
         filenames = []
         motion_images = []
+        labels = []
         for filename in Path(in_path_phase).rglob('*.png'):
             print(filename)
+            # !Ensure that the in_path_phase path contains directories with the names of the present labels. These 'label directories' then contain the motion images.
+            label = str(filename).split('\\')[-2]
             img = cv2.imread(os.path.abspath(filename))
             # TODO: Check if we need to convert colorspace
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             motion_images.append(img)
             filenames.append(filename)
+            labels.append(label)
 
         model.eval()
         # Detect if GPU available and add model to it
@@ -122,11 +126,13 @@ def dump_from_motion_images_train_val(in_path, model, model_name, feature_size, 
             output = output.cpu().detach().numpy().reshape((feature_size))
             feature_vectors.append(output)
 
-        ### Store feature vectors in file
+        ### Map motion image filename to [feature vectors, labels] list in json file. (tuples are not supported by json and will be converted to list)
         filename_featvec_dict = {}
         for i, name in enumerate(filenames):
-            seq_name = str(name).split("\\")[-1]
-            filename_featvec_dict[str(seq_name)] = feature_vectors[i].tolist()
+            # We use the motion images filename as an ID for the feature vector dictionary.
+            # ! Make sure each filename is unique or this will override keys that are present already
+            seq_id = str(name).split("\\")[-1]
+            filename_featvec_dict[str(seq_id)] = (feature_vectors[i].tolist(), labels[i])
 
         with open(out_path, 'w') as data_file:
             json.dump(filename_featvec_dict, data_file)
