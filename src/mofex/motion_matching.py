@@ -15,7 +15,7 @@ import mofex.models.resnet as resnet
 import mofex.feature_vectors as featvec
 
 
-def evaluate_matching(train_featvecs: list, val_featvecs: list):
+def evaluate_matching_top1(train_featvecs: list, val_featvecs: list):
     """ Returns a list of estimated most similar motion sequence tuples including feature vectors and respective classes.
         
         Args:
