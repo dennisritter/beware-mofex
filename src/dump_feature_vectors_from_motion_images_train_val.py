@@ -23,7 +23,7 @@ model_name = 'resnet101_hdm05-122_90-10'
 # The CNN Model for Feature Vector generation
 model = model_loader.load_trained_model(model_name=model_name,
                                         remove_last_layer=True,
-                                        state_dict_path=f'./data/trained_models/{dataset_name}/{model_name}_e20.pt')
+                                        state_dict_path=f'./data/trained_models/{dataset_name}/{model_name}_e50.pt')
 # The models output size (Feature Vector length
 feature_size = 2048
 # Transforms
