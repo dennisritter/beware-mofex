@@ -2,9 +2,11 @@ import os
 import mofex.feature_vectors as featvec
 import mofex.motion_matching as motion_matching
 
-train_featvecs_path = 'data/feature_vectors/hdm05-122/resnet18_hdm05-122_50-50/train/resnet18_hdm05-122_50-50_train.json'
-val_featvecs_path = 'data/feature_vectors/hdm05-122/resnet18_hdm05-122_50-50/val/resnet18_hdm05-122_50-50_val.json'
-matching_top1_result_output_path = 'data/feature_vectors/hdm05-122/resnet18_hdm05-122_50-50/matching_results'
+dataset_name = 'hdm05-122_90-10'
+model_name = 'resnet101_hdm05-122_90-10'
+train_featvecs_path = f'data/feature_vectors/{dataset_name}/{model_name}/train/{model_name}_train.json'
+val_featvecs_path = f'data/feature_vectors/{dataset_name}/{model_name}/val/{model_name}_val.json'
+matching_top1_result_output_path = f'data/feature_vectors/{dataset_name}/{model_name}/matching_results'
 
 # * featvec.load_from_file(<path>) returns a list of tuples -> [(<id_name>,<feature_vector>,<label>), ...]
 train_featvecs = featvec.load_from_file(train_featvecs_path)

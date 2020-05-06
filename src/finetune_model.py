@@ -21,14 +21,14 @@ import mofex.model_trainer as model_trainer
 
 # Models to choose from [resnet18, resnet50, resnet101]
 model_name = 'resnet101'
-# Dataset name. Choose from [hdm05-122]
-dataset_name = 'hdm05-122'
+# Dataset name. Choose from [hdm05-122_90-10]
+dataset_name = 'hdm05-122_90-10'
 # Top level data directory. Here we assume the format of the directory conforms to the ImageFolder structure
-data_dir = "./data/motion_images/hdm05-122"
+data_dir = "./data/motion_images/hdm05-122_90-10"
 # Number of classes in the dataset
 num_classes = 122
 # Number of epochs to train for
-num_epochs = 10
+num_epochs = 20
 # Batch size for training (change depending on how much memory you have)
 batch_size = 8
 # Flag for feature extracting. When False, we finetune the whole model,
@@ -69,6 +69,7 @@ criterion = nn.CrossEntropyLoss()
 # ----- The actual training
 
 # Train and evaluate
+# TODO: Support training for multiple models in one run
 model, val_acc_history = model_trainer.train_model(model, dataloaders_dict, criterion, optimizer, num_epochs=num_epochs)
 
 # ----- Post Training
