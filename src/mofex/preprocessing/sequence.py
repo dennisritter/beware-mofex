@@ -241,17 +241,19 @@ class Sequence:
         positions = positions.swapaxes(0, 2)[:, :, :3]
         return cls(positions, name=name, desc=desc)
 
-    def merge(self, sequence) -> 'Sequence':
+    def append(self, sequence) -> 'Sequence':
         """Returns the merged two sequences.
 
-        Raises ValueError if either the body_parts, the poseformat or the body_parts do not match!
+        Raises ValueError if shapes of the positions property do not fit together. 
         """
-        if self.body_parts != sequence.body_parts:
-            raise ValueError('body_parts of both sequences do not match!')
+        if self.positons.shape[1] != sequence.positions.shape[1] or self.positons.shape[2] != sequence.positions.shape[2]:
+            raise ValueError(
+                f'sequence.position shapes {self.positions.shape} and {sequence.positions.shape} do not fit together.\nPlease ensure that the second and third axes share the same dimensionality.'
+            )
 
         # Copy the given sequence to not change it implicitly
         sequence = sequence[:]
-        # concatenate positions, timestamps and angles
+        # concatenate positions
         self.positions = np.concatenate((self.positions, sequence.positions), axis=0)
 
         return self
