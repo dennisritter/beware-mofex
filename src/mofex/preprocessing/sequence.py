@@ -246,7 +246,7 @@ class Sequence:
 
         Raises ValueError if shapes of the positions property do not fit together. 
         """
-        if self.positons.shape[1] != sequence.positions.shape[1] or self.positons.shape[2] != sequence.positions.shape[2]:
+        if self.positions.shape[1] != sequence.positions.shape[1] or self.positions.shape[2] != sequence.positions.shape[2]:
             raise ValueError(
                 f'sequence.position shapes {self.positions.shape} and {sequence.positions.shape} do not fit together.\nPlease ensure that the second and third axes share the same dimensionality.'
             )
@@ -257,6 +257,15 @@ class Sequence:
         self.positions = np.concatenate((self.positions, sequence.positions), axis=0)
 
         return self
+
+    def split_into_batches(self, size: int = 10):
+        """ Splits this sequence into batches of specified size. Returns a consecutive list of sequences with length of the given size. 
+        
+            Args:
+                size (int) = 10: The size of the batches. 
+        """
+        batches = [self.positions[i:i + size] for i in range(0, len(self.positions), size)]
+        return [Sequence(batch, f'{self.name}__batch-{i}', f'{self.desc}__batch-{i}') for i, batch in enumerate(batches)]
 
     def to_motionimg(
             self,

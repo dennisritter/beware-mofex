@@ -26,7 +26,7 @@ class SkeletonVisualizer:
 
         print("Generating Skeleton Plot...")
         fig = go.Figure(data=traces, layout=layout, frames=frames)
-        fig.write_html('skeleton.html', auto_open=True)
+        fig.write_html('skeleton.html', auto_open=False)
         # print(f"Plot URL: {py.plot(fig, filename='skeleton', auto_open=False)}")
         # fig.show()
 
