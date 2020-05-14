@@ -239,6 +239,12 @@ class Sequence:
         c3d_object = c3d(str(path))
         positions = c3d_object['data']['points']
         positions = positions.swapaxes(0, 2)[:, :, :3]
+
+        # Swap X / Y
+        positions[:, :, [0, 1]] = positions[:, :, [1, 0]]
+        # Negate Y
+        positions[:, :, 1] = -positions[:, :, 1]
+
         return cls(positions, name=name, desc=desc)
 
     def append(self, sequence) -> 'Sequence':
