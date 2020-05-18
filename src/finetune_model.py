@@ -28,7 +28,7 @@ data_dir = "./data/motion_images/hdm05-122_90-10"
 # Number of classes in the dataset
 num_classes = 122
 # Number of epochs to train for
-num_epochs = 20
+num_epochs = 25
 # Batch size for training (change depending on how much memory you have)
 batch_size = 8
 # Flag for feature extracting. When False, we finetune the whole model,
