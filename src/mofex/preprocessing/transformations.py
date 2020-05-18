@@ -140,6 +140,7 @@ def norm_batch(v_arr):
 
 
 def mat_mul_batch(arr1, arr2):
+    # ! Identified Bug when using this function in normalize_rotation_first_frame !
     """Performs an element-wise Matrix multiplication for each element in the given arrays.
 
     The batch-wise matrix multiplication is equivalent to arr1 @ arr2 for each element in arr1 and arr2 respectively.
@@ -150,6 +151,7 @@ def mat_mul_batch(arr1, arr2):
         arr2 (np.ndarray): An array of vectors or matrices (1-D or 2-D np.arrays)
 
     """
+    print(f'{arr1.ndim}:{arr2.ndim}')
     if len(arr1) != len(arr2):
         raise ValueError('The number of elements in the first dimension of parameters a and b should be equal.')
     else:
