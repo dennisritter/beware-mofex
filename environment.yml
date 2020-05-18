@@ -8,7 +8,7 @@ dependencies:
   - python=3.8.*
   - numpy
   - opencv=4.2.*
-  - plotly=4.6.*
+  - plotly=4.7.*
   - chart-studio=1.1.*
   - click=7.1.*
   - pip
