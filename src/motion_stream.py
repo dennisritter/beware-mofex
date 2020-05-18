@@ -16,14 +16,6 @@ from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.preprocessing.normalizations as norm
 import mofex.feature_vectors as feature_vectors
 
-# TODO: 1. Load Ground Truth sequence GT (Type of motion we are looking for. e.g. a squat)
-# TODO: 2. Load Long Sequence Qs (group of the searched type of motions. e.g. 10 squats)
-# TODO: 3. Cut Qs into parts q of <batchsize>
-# TODO: 4. Make motion image -> Feature vector from q
-# TODO: 5. Compare FVq to FVgt and temp save distance
-# TODO: 6. Repeat with next n batches
-# TODO: 7. If distance decreases n times, we found end/start frame
-
 # ! Root directory of motion images. Make sure it includes 'train' and 'val' directory, which then include a directory for each present label in the dataset.
 # ! Structure template: <in_path>/train/<class_name>/motion_img1.png
 dataset_name = 'hdm05-122_90-10'
