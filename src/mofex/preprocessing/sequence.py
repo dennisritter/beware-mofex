@@ -244,8 +244,8 @@ class Sequence:
         positions[:, :, [0, 1]] = positions[:, :, [1, 0]]
         # Negate Y
         positions[:, :, 1] = -positions[:, :, 1]
-
-        return cls(positions, name=name, desc=desc)
+        # * For some reason, all body part positions are the same in the last frame, so we just remove it
+        return cls(positions[0:-1], name=name, desc=desc)
 
     def append(self, sequence) -> 'Sequence':
         """Returns the merged two sequences.
