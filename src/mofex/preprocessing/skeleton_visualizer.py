@@ -18,7 +18,7 @@ class SkeletonVisualizer:
 
         self.sequence = sequence[:]
 
-    def show(self):
+    def show(self, auto_open=True):
         """Visualises the human pose skeleton as an animated 3D Scatter Plot."""
         traces = self._get_traces(0)
         layout = self._get_layout()
@@ -26,7 +26,7 @@ class SkeletonVisualizer:
 
         print("Generating Skeleton Plot...")
         fig = go.Figure(data=traces, layout=layout, frames=frames)
-        fig.write_html('skeleton.html', auto_open=False)
+        fig.write_html('skeleton.html', auto_open=auto_open, auto_play=False)
         # print(f"Plot URL: {py.plot(fig, filename='skeleton', auto_open=False)}")
         # fig.show()
 
@@ -89,7 +89,7 @@ class SkeletonVisualizer:
             slider_step = {
                 "args": [[i], {
                     "frame": {
-                        "duration": 33,
+                        "duration": 0,
                         "redraw": True
                     },
                     "mode": "immediate",
@@ -112,12 +112,12 @@ class SkeletonVisualizer:
                 "label": "Play",
                 "args": [None, {
                     "frame": {
-                        "duration": 33,
+                        "duration": 0,
                         "redraw": True
                     },
                     "fromcurrent": True,
                     "transition": {
-                        "duration": 33,
+                        "duration": 0,
                         "easing": "linear"
                     }
                 }],
@@ -126,12 +126,12 @@ class SkeletonVisualizer:
                 "label": "Pause",
                 "args": [[None], {
                     "frame": {
-                        "duration": 33,
+                        "duration": 0,
                         "redraw": False
                     },
                     "mode": "immediate",
                     "transition": {
-                        "duration": 33
+                        "duration": 0
                     }
                 }],
                 "method": "animate"
@@ -141,7 +141,7 @@ class SkeletonVisualizer:
                 "r": 10,
                 "t": 87
             },
-            "showactive": False,
+            "showactive": True,
             "type": "buttons",
             "x": 0.1,
             "xanchor": "right",
@@ -170,10 +170,18 @@ class SkeletonVisualizer:
     def _make_joint_traces(self, frame):
         pos = self.sequence.positions
         trace_joints = go.Scatter3d(x=pos[frame, :, 0], y=pos[frame, :, 1], z=pos[frame, :, 2], mode="markers", marker=dict(color="royalblue", size=5))
-        root_joints = go.Scatter3d(x=np.array([0.0]), y=np.array([0.0]), z=np.array([0.0]), mode="markers", marker=dict(color="red", size=5))
-        # hipl = go.Scatter3d(x=pos[frame, 30, 0], y=pos[frame, 30, 1], z=pos[frame, 30, 2], mode="markers", marker=dict(color="red", size=5))
-        # hipr = go.Scatter3d(x=pos[frame, 37, 0], y=pos[frame, 37, 1], z=pos[frame, 37, 2], mode="markers", marker=dict(color="green", size=5))
-        return [trace_joints] + [root_joints]
+        # root_joints = go.Scatter3d(x=np.array([0.0]), y=np.array([0.0]), z=np.array([0.0]), mode="markers", marker=dict(color="red", size=5))
+        hipl = go.Scatter3d(x=np.array(pos[frame, 30, 0]),
+                            y=np.array(pos[frame, 30, 1]),
+                            z=np.array(pos[frame, 30, 2]),
+                            mode="markers",
+                            marker=dict(color="red", size=10))
+        hipr = go.Scatter3d(x=np.array(pos[frame, 37, 0]),
+                            y=np.array(pos[frame, 37, 1]),
+                            z=np.array(pos[frame, 37, 2]),
+                            mode="markers",
+                            marker=dict(color="green", size=10))
+        return [trace_joints] + [hipl, hipr]
 
     # def _make_limb_traces(self, frame):
     #     pos = self.sequence.positions
