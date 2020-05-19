@@ -61,5 +61,7 @@ def orientation_first_pose_frontal_to_camera(positions: 'np.ndarray', hip_l_idx:
     # Make array of rotation angles to perform batchwise matrix multiplication
     rotations = np.full((positions.shape[0], 3, 3), rz)
     for bp_idx in range(positions.shape[1]):
+        # for frame_idx in range(positions.shape[0]):
+        #     positions[frame_idx, bp_idx] = positions[frame_idx, bp_idx] @ rz
         positions[:, bp_idx] = positions[:, bp_idx] @ rz
     return positions

@@ -7,6 +7,7 @@ from ezc3d import c3d
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.preprocessing.transformations as transformations
 import mofex.preprocessing.normalizations as norm
+import mofex.acm_asf_parser.amc_parser as amc_asf_parser
 
 
 # Ignore pylint 'Function redefined warning' as Sequence is imported for pyright
@@ -246,6 +247,68 @@ class Sequence:
         positions[:, :, 1] = -positions[:, :, 1]
         # * For some reason, all body part positions are the same in the last frame, so we just remove it
         return cls(positions[0:-1], name=name, desc=desc)
+
+    @classmethod
+    def from_hdm05_asf_amc_files(cls, asf_path: str, acm_path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
+        """Loads MoCap data from HDM05 amc and asf files and returns an Sequence object including cody part coordinates.
+
+        Args:
+            asf_path (str): Path to the asf file. Includes available Joints and hierarchy.
+            amc_path (str): Path to the amc file. Includes motions.
+
+        Returns:
+            Sequence: a new Sequence instance from the given input.
+        """
+        asf_path = './data/sequences/hdm05-10/amc/cartwheelLHandStart1Reps/HDM_bd.asf'
+        amc_path = './data/sequences/hdm05-10/amc/cartwheelLHandStart1Reps/HDM_bd_cartwheelLHandStart1Reps_001_120.amc'
+        joints = amc_asf_parser.parse_asf(asf_path)
+        motions = amc_asf_parser.parse_amc(amc_path)
+
+        body_parts = {
+            'root': 0,
+            'lhipjoint': 1,
+            'lfemur': 2,
+            'ltibia': 3,
+            'lfoot': 4,
+            'ltoes': 5,
+            'rhipjoint': 6,
+            'rfemur': 7,
+            'rtibia': 8,
+            'rfoot': 9,
+            'rtoes': 10,
+            'lowerback': 11,
+            'upperback': 12,
+            'thorax': 13,
+            'lowerneck': 14,
+            'upperneck': 15,
+            'head': 16,
+            'lclavicle': 17,
+            'lhumerus': 18,
+            'lradius': 19,
+            'lwrist': 20,
+            'lhand': 21,
+            'lfingers': 22,
+            'lthumb': 23,
+            'rclavicle': 24,
+            'rhumerus': 25,
+            'rradius': 26,
+            'rwrist': 27,
+            'rhand': 28,
+            'rfingers': 29,
+            'rthumb': 30
+        }
+
+        positions = []
+        for frame in range(len(motions)):
+            joints['root'].set_motion(motions[frame])
+            positions.append([joints[joint].coordinate for joint in joints.keys()])
+        positions = np.array(positions).squeeze()
+
+        # Swap X / Y
+        positions[:, :, [1, 2]] = positions[:, :, [2, 1]]
+        # Negate Y
+        positions[:, :, 1] = -positions[:, :, 1]
+        return cls(positions, name=name, desc=desc)
 
     def append(self, sequence) -> 'Sequence':
         """Returns the merged two sequences.
