@@ -39,9 +39,9 @@ class SkeletonVisualizer:
             sliders = self._make_sliders()
 
         scene = dict(
-            xaxis=dict(range=[-1500, 1500], ),
-            yaxis=dict(range=[-1500, 1500], ),
-            zaxis=dict(range=[-1500, 1500], ),
+            xaxis=dict(range=[-50, 50], ),
+            yaxis=dict(range=[-50, 50], ),
+            zaxis=dict(range=[-50, 50], ),
             camera=dict(up=dict(x=0, y=0, z=1.25), eye=dict(x=-1.2, y=-1.2, z=1.2)),
         )
 
@@ -171,17 +171,17 @@ class SkeletonVisualizer:
         pos = self.sequence.positions
         trace_joints = go.Scatter3d(x=pos[frame, :, 0], y=pos[frame, :, 1], z=pos[frame, :, 2], mode="markers", marker=dict(color="royalblue", size=5))
         # root_joints = go.Scatter3d(x=np.array([0.0]), y=np.array([0.0]), z=np.array([0.0]), mode="markers", marker=dict(color="red", size=5))
-        hipl = go.Scatter3d(x=np.array(pos[frame, 30, 0]),
-                            y=np.array(pos[frame, 30, 1]),
-                            z=np.array(pos[frame, 30, 2]),
+        hipl = go.Scatter3d(x=np.array(pos[frame, 1, 0]),
+                            y=np.array(pos[frame, 1, 1]),
+                            z=np.array(pos[frame, 1, 2]),
                             mode="markers",
                             marker=dict(color="red", size=10))
-        hipr = go.Scatter3d(x=np.array(pos[frame, 37, 0]),
-                            y=np.array(pos[frame, 37, 1]),
-                            z=np.array(pos[frame, 37, 2]),
+        hipr = go.Scatter3d(x=np.array(pos[frame, 6, 0]),
+                            y=np.array(pos[frame, 6, 1]),
+                            z=np.array(pos[frame, 6, 2]),
                             mode="markers",
                             marker=dict(color="green", size=10))
-        return [trace_joints] + [hipl, hipr]
+        return [trace_joints]  #+ [hipl, hipr]
 
     # def _make_limb_traces(self, frame):
     #     pos = self.sequence.positions
