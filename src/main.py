@@ -14,30 +14,30 @@ from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.models.resnet as resnet
 import mofex.feature_vectors as featvec
 import plotly.graph_objects as go
+from mofex.load_sequences import load_seqs_asf_amc
 
+# def load_seqs(root, regex_str_asf, regex_str_amc):
+#     seqs = []
+#     print(f'Loading sequences from:\nroot: {root}\nASF pattern: {regex_str_asf}\nAMC pattern: {regex_str_amc}')
+#     for amc_path in Path(root).rglob(regex_str_amc):
+#         class_dir = '/'.join(str(amc_path).split("\\")[:-1])
+#         amc_file = str(amc_path).split("\\")[-1]
+#         asf_file = amc_file[0:7]
+#         asf_path = class_dir + asf_file
+#         seqs.append(Sequence.from_hdm05_asf_amc_files(asf_path, amc_path, name=amc_file, desc=class_dir.split('/')[-1]))
+#         print(f'loaded: {seqs[-1].name} -> {seqs[-1].desc}')
+#     return seqs
 
-def load_seqs(root, regex_str_asf, regex_str_amc):
-    seqs = []
-    print(f'Loading sequences from:\nroot: {root}\nASF pattern: {regex_str_asf}\nAMC pattern: {regex_str_amc}')
-    for amc_path in Path(root).rglob(regex_str_amc):
-        class_dir = '/'.join(str(amc_path).split("\\")[:-1])
-        amc_file = str(amc_path).split("\\")[-1]
-        asf_file = amc_file[0:7]
-        asf_path = class_dir + asf_file
-        seqs.append(Sequence.from_hdm05_asf_amc_files(asf_path, amc_path, name=amc_file, desc=class_dir.split('/')[-1]))
-        print(f'loaded: {seqs[-1].name} -> {seqs[-1].desc}')
-    return seqs
-
-
-root = './data/sequences/hdm05-10/amc/'
+root = './data/sequences/hdm05-122/amc/'
 filename_asf = '*.asf'
 filename_amc = '*.amc'
-seqs = load_seqs(root, filename_asf, filename_amc)
+seqs = load_seqs_asf_amc(root, filename_asf, filename_amc)
 
 x = []
 y = []
 z = []
 for seq in seqs:
+    print(f'Processing: {seq.name}')
     seq.norm_center_positions()
     seq.norm_relative_to_positions((seq.positions[:, 1, :] + seq.positions[:, 6, :]) * 0.5)
     seq.norm_orientation_first_pose_frontal_to_camera(1, 6)
@@ -77,5 +77,5 @@ fig = go.Figure(data=[go.Bar(x=group_labels, y=xgroup_sizes), go.Bar(x=group_lab
 fig.update_layout(barmode='group')
 fig.show()
 
-sv = SkeletonVisualizer(seqs[18])
+sv = SkeletonVisualizer(seqs[0])
 sv.show()

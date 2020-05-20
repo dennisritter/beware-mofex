@@ -249,7 +249,7 @@ class Sequence:
         return cls(positions[0:-1], name=name, desc=desc)
 
     @classmethod
-    def from_hdm05_asf_amc_files(cls, asf_path: str, acm_path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
+    def from_hdm05_asf_amc_files(cls, asf_path: str, amc_path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
         """Loads MoCap data from HDM05 amc and asf files and returns an Sequence object including cody part coordinates.
 
         Args:
@@ -259,8 +259,6 @@ class Sequence:
         Returns:
             Sequence: a new Sequence instance from the given input.
         """
-        asf_path = './data/sequences/hdm05-10/amc/cartwheelLHandStart1Reps/HDM_bd.asf'
-        amc_path = './data/sequences/hdm05-10/amc/cartwheelLHandStart1Reps/HDM_bd_cartwheelLHandStart1Reps_001_120.amc'
         joints = amc_asf_parser.parse_asf(asf_path)
         motions = amc_asf_parser.parse_amc(amc_path)
 
