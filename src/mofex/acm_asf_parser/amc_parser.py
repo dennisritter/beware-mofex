@@ -1,7 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from transforms3d.euler import euler2mat
 from mpl_toolkits.mplot3d import Axes3D
+# import matplotlib.pyplot as plt
 """SOURCE: https://github.com/CalciferZh/AMCParser
 
 Parse asf/amc files.
