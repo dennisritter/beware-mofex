@@ -49,17 +49,37 @@ def relative_to_positions(positions: 'np.ndarray', root_positions: 'np.ndarray')
     return positions
 
 
-# def orientation_frontal_to_camera_all_poses(positions: 'np.ndarray', hip_l_idx: int, hip_r_idx: int) -> 'np.ndarray':
-#   phis = ((positions[:, hip_l_idx, 1] - positions[:, hip_l_idx, 1]) / (positions[:, hip_r_idx, 0] - positions[:, hip_r_idx, 0]))
+# ! Not Working as expected
+# def orientation_first_pose_frontal_to_camera(positions: 'np.ndarray', hip_l_idx: int, hip_r_idx: int) -> 'np.ndarray':
+#     # TODO: Understand why this is the rotation angle. Source: 10.1007/s11042-017-4859-7 chapter 3.2.2
+#     # Calc roation angle about Z
+#     phi = np.arctan((positions[0, hip_l_idx, 0] - positions[0, hip_r_idx, 0]) / (positions[0, hip_l_idx, 1] - positions[0, hip_r_idx, 1]))
+#     rz = np.array([[math.cos(phi), -1 * math.sin(phi), 0], [math.sin(phi), math.cos(phi), 0], [0, 0, 1]])
+#     # Make array of rotation angles to perform batchwise matrix multiplication
+#     rotations = np.full((positions.shape[0], 3, 3), rz)
+#     for bp_idx in range(positions.shape[1]):
+#         # for frame_idx in range(positions.shape[0]):
+#         #     positions[frame_idx, bp_idx] = positions[frame_idx, bp_idx] @ rz
+#         positions[:, bp_idx] = positions[:, bp_idx] @ rz
+#     return positions
 
 
+# TODO !
+#1=lhip,6=rhip,9=belly
 def orientation_first_pose_frontal_to_camera(positions: 'np.ndarray', hip_l_idx: int, hip_r_idx: int) -> 'np.ndarray':
-    # TODO: Understand why this is the rotation angle. Source: 10.1007/s11042-017-4859-7 chapter 3.2.2
+    # Rotate all points for angle phi about the z-axis. So that left hip x < right hip x in frame=0
     # Calc roation angle about Z
-    phi = np.arctan((positions[0, hip_l_idx, 0] - positions[0, hip_r_idx, 0]) / (positions[0, hip_l_idx, 1] - positions[0, hip_r_idx, 1]))
-    rz = np.array([[math.cos(phi), -1 * math.sin(phi), 0], [math.sin(phi), math.cos(phi), 0], [0, 0, 1]])
-    # Make array of rotation angles to perform batchwise matrix multiplication
-    rotations = np.full((positions.shape[0], 3, 3), rz)
+    vec_hip_l_to_hip_r = positions[0, hip_r_idx] - positions[0, hip_l_idx]
+    vec_x_axis = np.array([1.0, 0.0, 0.0])
+
+    # phi = transformations.get_angle(vec_hip_l_to_hip_r, vec_x_axis)
+    # print(f'PHI = {phi}')
+
+    rz = transformations.get_rotation(vec_hip_l_to_hip_r, vec_x_axis)[:3, :3]
+    print(rz)
+    # rz = np.array([[math.cos(phi), -1 * math.sin(phi), 0], [math.sin(phi), math.cos(phi), 0], [0, 0, 1]])
+    # # Make array of rotation angles to perform batchwise matrix multiplication
+    # rotations = np.full((positions.shape[0], 3, 3), rz)
     for bp_idx in range(positions.shape[1]):
         # for frame_idx in range(positions.shape[0]):
         #     positions[frame_idx, bp_idx] = positions[frame_idx, bp_idx] @ rz

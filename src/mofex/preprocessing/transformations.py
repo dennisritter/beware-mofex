@@ -5,7 +5,7 @@ import sklearn.preprocessing as preprocessing
 
 
 def get_angle(vec1, vec2):
-    """Returns the angle between vectors vec1 and vec2 (normalized) in degrees
+    """Returns the angle between vectors vec1 and vec2 (normalized) in radians
 
     Args:
         vec1 (np.ndarray): A 3-D vector whose direction defines an angle of zero.
