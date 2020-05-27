@@ -5,6 +5,7 @@ import os
 import random
 import math
 import time
+from scipy import stats
 from datetime import datetime
 from pathlib import Path
 import torch
@@ -47,14 +48,37 @@ x.sort()
 y.sort()
 z.sort()
 # Get overall min/max values for xyz respectively
-# ignore outer 1%
-xmin = math.floor(x[math.floor(0.01 * len(x)):].min())
-xmax = math.ceil(x[:math.floor(len(x) - 0.01 * len(x))].max())
-ymin = math.floor(y[math.floor(0.01 * len(y)):].min())
-ymax = math.ceil(y[:math.floor(len(y) - 0.01 * len(y))].max())
-zmin = math.floor(z[math.floor(0.01 * len(z)):].min())
-zmax = math.ceil(z[:math.floor(len(z) - 0.01 * len(z))].max())
-
+# xmin = math.floor(x.min())
+# xmax = math.ceil(x.max())
+# ymin = math.floor(y.min())
+# ymax = math.ceil(y.max())
+# zmin = math.floor(z.min())
+# zmax = math.ceil(z.max())
+# Ignore outer 1%
+# xmin = xmin[math.floor(0.01 * len(x)):]
+# xmax = xmax[:math.floor(len(x) - 0.01 * len(x))]
+# ymin = ymin[math.floor(0.01 * len(y)):]
+# ymax = ymax[:math.floor(len(y) - 0.01 * len(y))]
+# zmin = zmin[math.floor(0.01 * len(z)):]
+# zmax = zmax[:math.floor(len(z) - 0.01 * len(z))]
+# Z Scores
+ZSCORE_ABS_THRESHOLD = 3
+shape_full_x = x.shape
+shape_full_y = y.shape
+shape_full_z = z.shape
+x = x[abs(stats.zscore(x)) < ZSCORE_ABS_THRESHOLD]
+y = y[abs(stats.zscore(y)) < ZSCORE_ABS_THRESHOLD]
+z = z[abs(stats.zscore(z)) < ZSCORE_ABS_THRESHOLD]
+shape_filtered_x = x.shape
+shape_filtered_y = y.shape
+shape_filtered_z = z.shape
+xmin = math.floor(x.min())
+xmax = math.ceil(x.max())
+ymin = math.floor(y.min())
+ymax = math.ceil(y.max())
+zmin = math.floor(z.min())
+zmax = math.ceil(z.max())
+print(f'{(xmin, xmax)}, {(ymin, ymax)}, {(zmin, zmax)}')
 xgroups = []
 ygroups = []
 zgroups = []

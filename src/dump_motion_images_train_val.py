@@ -15,12 +15,13 @@ filename_asf = '*.asf'
 filename_amc = '*.amc'
 
 dump_root = 'data/motion_images'
-dataset_name = 'hdm05-122_90-10'
+dataset_name = 'hdm05-3_90-10'
 
-### Load Sequences
+# --- Loading Sequences and preprocessing
 seqs = load_seqs_asf_amc(src_root, filename_asf, filename_amc)
 labeled_sequences_dict = {}
 
+# Init Lists to store X,Y,Z coordinates seperately in order to determine usefull min/max values for color mapping
 x = []
 y = []
 z = []
@@ -35,7 +36,7 @@ for seq in seqs:
     x.extend(seq.positions[:, :, 0].flatten().tolist())
     y.extend(seq.positions[:, :, 1].flatten().tolist())
     z.extend(seq.positions[:, :, 2].flatten().tolist())
-    print(seq.desc)
+    # Fill dictionary with classes present in dataset to split sequences in each class seperately
     if seq.desc in labeled_sequences_dict.keys():
         labeled_sequences_dict[seq.desc].append(seq)
     else:
@@ -44,19 +45,15 @@ for seq in seqs:
 print(f"Loaded Sequence Files")
 train_seqs = []
 val_seqs = []
+# Split class sequences into train/val sets
 for label in labeled_sequences_dict.keys():
-    if len(labeled_sequences_dict[label]) < 10:
-        print(label)
-    else:
-        label_split = train_test_split(labeled_sequences_dict[label], test_size=0.1, random_state=42)
-        train_seqs.extend(label_split[0])
-        val_seqs.extend(label_split[1])
+    label_split = train_test_split(labeled_sequences_dict[label], test_size=0.1, random_state=42)
+    train_seqs.extend(label_split[0])
+    val_seqs.extend(label_split[1])
 
-# make array from list
 x = np.array(x)
 y = np.array(y)
 z = np.array(z)
-# sort
 x.sort()
 y.sort()
 z.sort()
@@ -70,12 +67,14 @@ zmin = z[math.floor(0.01 * len(z)):].min()
 zmax = z[:math.floor(len(z) - 0.01 * len(z))].max()
 minmax_filename = f'{dump_root}/{dataset_name}/minmax_values.txt'
 
+# Create basic text file to store(remember) the used min/max values
 if not os.path.isdir(f'{dump_root}/{dataset_name}'):
     os.makedirs(f'{dump_root}/{dataset_name}')
 minmax_file = open(minmax_filename, 'w')
 minmax_file.write(f'x: [{xmin}, {xmax}]\ny: [{ymin}, {ymax}]\nz: [{zmin}, {zmax}]')
 minmax_file.close()
-#----------------
+
+# --- Create Motion Images
 # Train Set
 for seq in train_seqs:
     # set and create directories
@@ -83,7 +82,8 @@ for seq in train_seqs:
     out = f'{class_dir}/{seq.name}.png'
     if not os.path.isdir(os.path.abspath(class_dir)):
         os.makedirs(os.path.abspath(class_dir))
-    # save motion img
+    # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
+    # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
     img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
     cv2.imwrite(out, img)
 # Validation Set
@@ -93,10 +93,12 @@ for seq in val_seqs:
     out = f'{class_dir}/{seq.name}.png'
     if not os.path.isdir(os.path.abspath(class_dir)):
         os.makedirs(os.path.abspath(class_dir))
-    # save motion img
-    cv2.imwrite(out, img)
+    # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
+    # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
     img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+    cv2.imwrite(out, img)
 
+# --- Create Coordinate Histogram
 # Save a histogram of all coordinate values to visualize the distribution.
 xgroups = []
 ygroups = []

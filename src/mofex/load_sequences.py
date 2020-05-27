@@ -12,5 +12,5 @@ def load_seqs_asf_amc(root, regex_str_asf, regex_str_amc):
         asf_file = f'{amc_file[0:6]}.asf'
         asf_path = class_dir + '/' + asf_file
         seqs.append(Sequence.from_hdm05_asf_amc_files(asf_path=asf_path, amc_path=amc_path, name=amc_file, desc=class_dir.split('/')[-1]))
-        print(f'loaded: {seqs[-1].name} -> {seqs[-1].desc}')
+        print(f'Loaded: {seqs[-1].name} -> Class = {seqs[-1].desc}')
     return seqs
