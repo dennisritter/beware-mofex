@@ -26,17 +26,17 @@ def get_angle_batch(vec1, vec2):
     return np.arccos(dot_batch(vec1, vec2))
 
 
-def get_rotation(vec1, vec2):
+def get_rotation(vec_from, vec_to):
     """Returns a homogenious 4x4 transformation matrix without translation vector that describes the rotational transformation from vec1 to vec2
 
     Args:
-        vec1 (np.ndarray): A 3-D vector whose direction defines the starting point of rotation.
-        vec2 (np.ndarray): A 3-D vectors whose direction defines the end point of rotation.
+        vec_from (np.ndarray): A 3-D vector whose direction defines the starting point of rotation.
+        vec_to (np.ndarray): A 3-D vectors whose direction defines the end point of rotation.
     """
-    vec1 = norm(vec1)
-    vec2 = norm(vec2)
-    theta = get_angle(vec1, vec2)
-    rotation_axis = get_perpendicular_vector(vec1, vec2)
+    vec_from = norm(vec_from)
+    vec_to = norm(vec_to)
+    theta = get_angle(vec_to, vec_from)
+    rotation_axis = get_perpendicular_vector(vec_to, vec_from)
     rot_mat = rotation_matrix_4x4(rotation_axis, theta)
     return rot_mat
 

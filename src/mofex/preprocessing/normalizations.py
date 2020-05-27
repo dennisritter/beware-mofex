@@ -51,7 +51,7 @@ def relative_to_positions(positions: 'np.ndarray', root_positions: 'np.ndarray')
 
 # ! Not Working as expected
 # def orientation_first_pose_frontal_to_camera(positions: 'np.ndarray', hip_l_idx: int, hip_r_idx: int) -> 'np.ndarray':
-#     # TODO: Understand why this is the rotation angle. Source: 10.1007/s11042-017-4859-7 chapter 3.2.2
+#     # TODO: Understand why this is the rotation angle. Source: 10.1007/s11042-017-4859-7 chapter 3.2.2 chapter 3.2.2
 #     # Calc roation angle about Z
 #     phi = np.arctan((positions[0, hip_l_idx, 0] - positions[0, hip_r_idx, 0]) / (positions[0, hip_l_idx, 1] - positions[0, hip_r_idx, 1]))
 #     rz = np.array([[math.cos(phi), -1 * math.sin(phi), 0], [math.sin(phi), math.cos(phi), 0], [0, 0, 1]])
@@ -76,7 +76,6 @@ def orientation_first_pose_frontal_to_camera(positions: 'np.ndarray', hip_l_idx:
     # print(f'PHI = {phi}')
 
     rz = transformations.get_rotation(vec_hip_l_to_hip_r, vec_x_axis)[:3, :3]
-    print(rz)
     # rz = np.array([[math.cos(phi), -1 * math.sin(phi), 0], [math.sin(phi), math.cos(phi), 0], [0, 0, 1]])
     # # Make array of rotation angles to perform batchwise matrix multiplication
     # rotations = np.full((positions.shape[0], 3, 3), rz)
