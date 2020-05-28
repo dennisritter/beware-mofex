@@ -82,8 +82,9 @@ def orientation(positions: 'np.ndarray', left: 'np.ndarray', right: 'np.ndarray'
     # Vector from
     vec_up_on_x_to_up = up - vec_up_on_x
     alpha = transformations.get_angle(vec_z_axis, vec_up_on_x_to_up)
-    rx = np.array([[1, 0, 0], [0, math.cos(-alpha), -math.sin(-alpha)], [0, math.sin(-alpha), math.cos(-alpha)]])
-
+    # Define direction of rotation. (alpha is always positive)
+    r_alpha = -alpha if up[1] <= 0 else alpha
+    rx = np.array([[1, 0, 0], [0, math.cos(-r_alpha), -math.sin(-r_alpha)], [0, math.sin(-r_alpha), math.cos(-r_alpha)]])
     for bp_idx in range(positions.shape[1]):
         positions[:, bp_idx] = positions[:, bp_idx] @ r
         positions[:, bp_idx] = positions[:, bp_idx] @ rx
