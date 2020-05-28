@@ -181,7 +181,12 @@ class SkeletonVisualizer:
                             z=np.array(pos[frame, 6, 2]),
                             mode="markers",
                             marker=dict(color="green", size=10))
-        return [trace_joints]  #+ [hipl, hipr]
+        lowerback = go.Scatter3d(x=np.array(pos[frame, 11, 0]),
+                             y=np.array(pos[frame, 11, 1]),
+                             z=np.array(pos[frame, 11, 2]),
+                             mode="markers",
+                             marker=dict(color="black", size=10))
+        return [trace_joints] + [hipl, hipr, lowerback]
 
     # def _make_limb_traces(self, frame):
     #     pos = self.sequence.positions
