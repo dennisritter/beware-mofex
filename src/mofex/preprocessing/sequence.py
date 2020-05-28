@@ -227,6 +227,7 @@ class Sequence:
 
         return cls(positions, name=name, desc=desc)
 
+    # ! Do not use -> varying number of body parts in sequences
     @classmethod
     def from_hdm05_c3d_file(cls, path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
         """Loads the Positions of the a .c3d file and returns an Sequence object.
@@ -387,6 +388,6 @@ class Sequence:
         self.positions = norm.relative_to_positions(self.positions, root_positions=positions)
         return
 
-    def norm_orientation_first_pose_frontal_to_camera(self, hip_l_idx, hip_r_idx):
-        self.positions = norm.orientation_first_pose_frontal_to_camera(self.positions, hip_l_idx, hip_r_idx)
+    def norm_orientation(self, left, right, up):
+        self.positions = norm.orientation(self.positions, left, right, up)
         return
