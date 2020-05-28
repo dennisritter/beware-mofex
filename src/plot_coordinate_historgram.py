@@ -82,18 +82,16 @@ print(f'{(xmin, xmax)}, {(ymin, ymax)}, {(zmin, zmax)}')
 xgroups = []
 ygroups = []
 zgroups = []
-for min_rng in range(xmin, xmax):
+min = np.array([xmin, ymin, zmin]).min()
+max = np.array([xmax, ymax, zmax]).max()
+for min_rng in range(min, max):
     xgroups.append(x[np.where((x > min_rng) & (x < min_rng + 1))[0]])
-for min_rng in range(ymin, ymax):
     ygroups.append(y[np.where((y > min_rng) & (y < min_rng + 1))[0]])
-for min_rng in range(zmin, zmax):
     zgroups.append(z[np.where((z > min_rng) & (z < min_rng + 1))[0]])
 xgroup_sizes = [len(group) for group in xgroups]
 ygroup_sizes = [len(group) for group in ygroups]
 zgroup_sizes = [len(group) for group in zgroups]
 
-min = np.array([xmin, ymin, zmin]).min()
-max = np.array([xmax, ymax, zmax]).max()
 group_labels = [f'[{g},{(g+1)}]' for g in range(min, max)]
 fig = go.Figure(data=[go.Bar(x=group_labels, y=xgroup_sizes), go.Bar(x=group_labels, y=ygroup_sizes), go.Bar(x=group_labels, y=zgroup_sizes)])
 fig.update_layout(barmode='group')
