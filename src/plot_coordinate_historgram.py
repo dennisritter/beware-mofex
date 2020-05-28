@@ -17,10 +17,19 @@ import mofex.feature_vectors as featvec
 import plotly.graph_objects as go
 from mofex.load_sequences import load_seqs_asf_amc
 
-root = './data/sequences/hdm05-3/amc/'
+root = './data/sequences/hdm05-122/amc/'
 filename_asf = '*.asf'
-filename_amc = '*.amc'
+# filename_amc = 'HDM_bd_walkLeft3Steps_003_120.amc'
+filename_amc = 'HDM_tr_kickLSide2Reps_011_120.amc'
 seqs = load_seqs_asf_amc(root, filename_asf, filename_amc)
+
+# Indices constants for body parts that define normalized orientation of the skeleton
+# left -> hip_left
+LEFT_IDX = 1
+# right -> hip_right
+RIGHT_IDX = 6
+# up -> lowerback
+UP_IDX = 11
 
 x = []
 y = []
@@ -30,10 +39,10 @@ for seq in seqs:
     print(f'Processing: {seq.name}')
     # Normalization
     seq.norm_center_positions()
-    seq.norm_relative_to_positions((seq.positions[:, 1, :] + seq.positions[:, 6, :]) * 0.5)
-    # sv_orig = SkeletonVisualizer(seq)
-    # sv_orig.show()
-    seq.norm_orientation_first_pose_frontal_to_camera(1, 6)
+    seq.norm_relative_to_positions((seq.positions[:, LEFT_IDX, :] + seq.positions[:, RIGHT_IDX, :]) * 0.5)
+    seq.norm_orientation(seq.positions[0, LEFT_IDX], seq.positions[0, RIGHT_IDX], seq.positions[0, UP_IDX])
+    sv = SkeletonVisualizer(seq)
+    sv.show()
     # Add flattened xyz values to list respectively
     x.extend(seq.positions[:, :, 0].flatten().tolist())
     y.extend(seq.positions[:, :, 1].flatten().tolist())
@@ -47,6 +56,8 @@ z = np.array(z)
 x.sort()
 y.sort()
 z.sort()
+
+
 # Get overall min/max values for xyz respectively
 # xmin = math.floor(x.min())
 # xmax = math.ceil(x.max())
@@ -55,23 +66,29 @@ z.sort()
 # zmin = math.floor(z.min())
 # zmax = math.ceil(z.max())
 # Ignore outer 1%
-# xmin = xmin[math.floor(0.01 * len(x)):]
-# xmax = xmax[:math.floor(len(x) - 0.01 * len(x))]
-# ymin = ymin[math.floor(0.01 * len(y)):]
-# ymax = ymax[:math.floor(len(y) - 0.01 * len(y))]
-# zmin = zmin[math.floor(0.01 * len(z)):]
-# zmax = zmax[:math.floor(len(z) - 0.01 * len(z))]
-# Z Scores
-ZSCORE_ABS_THRESHOLD = 3
-shape_full_x = x.shape
-shape_full_y = y.shape
-shape_full_z = z.shape
-x = x[abs(stats.zscore(x)) < ZSCORE_ABS_THRESHOLD]
-y = y[abs(stats.zscore(y)) < ZSCORE_ABS_THRESHOLD]
-z = z[abs(stats.zscore(z)) < ZSCORE_ABS_THRESHOLD]
-shape_filtered_x = x.shape
-shape_filtered_y = y.shape
-shape_filtered_z = z.shape
+# x = x[math.floor(0.01 * len(x)):math.floor(len(x) - 0.01 * len(x))]
+# y = y[math.floor(0.01 * len(y)):math.floor(len(y) - 0.01 * len(y))]
+# z = z[math.floor(0.01 * len(z)):math.floor(len(z) - 0.01 * len(z))]
+# Z Score outlier filtering
+# ZSCORE_ABS_THRESHOLD = 2.5
+# x = x[abs(stats.zscore(x)) < 3]
+# y = y[abs(stats.zscore(y)) < 3]
+# z = z[abs(stats.zscore(z)) < 2.5]
+# IQR outlier filtering
+def filter_outliers_iqr(data: 'np.ndarray', factor: float = 1.5):
+    q1 = np.quantile(x, 0.25)
+    q3 = np.quantile(x, 0.75)
+    iqr = q3 - q1
+    lower = q1 - factor * iqr
+    upper = q3 + factor * iqr
+    return data[np.where((data > lower) & (data < upper))]
+
+
+iqr_factor = 2.5
+x = filter_outliers_iqr(x, factor=iqr_factor)
+y = filter_outliers_iqr(y, factor=iqr_factor)
+z = filter_outliers_iqr(z, factor=3.5)
+
 xmin = math.floor(x.min())
 xmax = math.ceil(x.max())
 ymin = math.floor(y.min())
@@ -96,5 +113,3 @@ group_labels = [f'[{g},{(g+1)}]' for g in range(min, max)]
 fig = go.Figure(data=[go.Bar(x=group_labels, y=xgroup_sizes), go.Bar(x=group_labels, y=ygroup_sizes), go.Bar(x=group_labels, y=zgroup_sizes)])
 fig.update_layout(barmode='group')
 fig.show()
-# sv = SkeletonVisualizer(seqs[02])
-# sv.show()
