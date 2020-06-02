@@ -20,7 +20,7 @@ from mofex.load_sequences import load_seqs_asf_amc
 root = './data/sequences/hdm05-122/amc/'
 filename_asf = '*.asf'
 # filename_amc = 'HDM_bd_walkLeft3Steps_003_120.amc'
-filename_amc = 'HDM_tr_kickLSide2Reps_011_120.amc'
+filename_amc = 'HDM_tr_hitRHandHead_012_120.amc'
 seqs = load_seqs_asf_amc(root, filename_asf, filename_amc)
 
 # Indices constants for body parts that define normalized orientation of the skeleton
