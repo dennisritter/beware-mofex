@@ -169,24 +169,30 @@ class SkeletonVisualizer:
 
     def _make_joint_traces(self, frame):
         pos = self.sequence.positions
-        trace_joints = go.Scatter3d(x=pos[frame, :, 0], y=pos[frame, :, 1], z=pos[frame, :, 2], mode="markers", marker=dict(color="royalblue", size=5))
+        trace_joints = go.Scatter3d(x=pos[frame, :, 0],
+                                    y=pos[frame, :, 1],
+                                    z=pos[frame, :, 2],
+                                    text=np.arange(len(pos[frame])),
+                                    textposition='top center',
+                                    mode="markers+text",
+                                    marker=dict(color="royalblue", size=5))
         # root_joints = go.Scatter3d(x=np.array([0.0]), y=np.array([0.0]), z=np.array([0.0]), mode="markers", marker=dict(color="red", size=5))
-        hipl = go.Scatter3d(x=np.array(pos[frame, 1, 0]),
-                            y=np.array(pos[frame, 1, 1]),
-                            z=np.array(pos[frame, 1, 2]),
-                            mode="markers",
-                            marker=dict(color="red", size=10))
-        hipr = go.Scatter3d(x=np.array(pos[frame, 6, 0]),
-                            y=np.array(pos[frame, 6, 1]),
-                            z=np.array(pos[frame, 6, 2]),
-                            mode="markers",
-                            marker=dict(color="green", size=10))
-        lowerback = go.Scatter3d(x=np.array(pos[frame, 11, 0]),
-                             y=np.array(pos[frame, 11, 1]),
-                             z=np.array(pos[frame, 11, 2]),
-                             mode="markers",
-                             marker=dict(color="black", size=10))
-        return [trace_joints] + [hipl, hipr, lowerback]
+        # hipl = go.Scatter3d(x=np.array(pos[frame, 1, 0]),
+        #                     y=np.array(pos[frame, 1, 1]),
+        #                     z=np.array(pos[frame, 1, 2]),
+        #                     mode="markers",
+        #                     marker=dict(color="red", size=10))
+        # hipr = go.Scatter3d(x=np.array(pos[frame, 6, 0]),
+        #                     y=np.array(pos[frame, 6, 1]),
+        #                     z=np.array(pos[frame, 6, 2]),
+        #                     mode="markers",
+        #                     marker=dict(color="green", size=10))
+        # lowerback = go.Scatter3d(x=np.array(pos[frame, 11, 0]),
+        #                      y=np.array(pos[frame, 11, 1]),
+        #                      z=np.array(pos[frame, 11, 2]),
+        #                      mode="markers",
+        #                      marker=dict(color="black", size=10))
+        return [trace_joints]  # + [hipl, hipr, lowerback]
 
     # def _make_limb_traces(self, frame):
     #     pos = self.sequence.positions
