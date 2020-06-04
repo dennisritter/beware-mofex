@@ -15,13 +15,13 @@ from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.models.resnet as resnet
 import mofex.feature_vectors as featvec
 import plotly.graph_objects as go
-from mofex.load_sequences import load_seqs_asf_amc
+from mofex.load_sequences import load_seqs_asf_amc_cmu
 
-root = './data/sequences/hdm05-122/amc/'
+root = './data/sequences/cmu-30/amc/'
 filename_asf = '*.asf'
 # filename_amc = 'HDM_bd_walkLeft3Steps_003_120.amc'
-filename_amc = 'HDM_tr_hitRHandHead_012_120.amc'
-seqs = load_seqs_asf_amc(root, filename_asf, filename_amc)
+filename_amc = '*.amc'
+seqs = load_seqs_asf_amc_cmu(root, filename_asf, filename_amc)
 
 # Indices constants for body parts that define normalized orientation of the skeleton
 # left -> hip_left
@@ -41,8 +41,8 @@ for seq in seqs:
     seq.norm_center_positions()
     seq.norm_relative_to_positions((seq.positions[:, LEFT_IDX, :] + seq.positions[:, RIGHT_IDX, :]) * 0.5)
     seq.norm_orientation(seq.positions[0, LEFT_IDX], seq.positions[0, RIGHT_IDX], seq.positions[0, UP_IDX])
-    sv = SkeletonVisualizer(seq)
-    sv.show()
+    # sv = SkeletonVisualizer(seq)
+    # sv.show()
     # Add flattened xyz values to list respectively
     x.extend(seq.positions[:, :, 0].flatten().tolist())
     y.extend(seq.positions[:, :, 1].flatten().tolist())

@@ -7,15 +7,15 @@ from pathlib import Path
 import plotly.graph_objects as go
 from mofex.preprocessing.sequence import Sequence
 from sklearn.model_selection import train_test_split
-from mofex.load_sequences import load_seqs_asf_amc
+from mofex.load_sequences import load_seqs_asf_amc_cmu
 
 # Root folder for Sequence files
-src_root = './data/sequences/hdm05-122/amc/'
+src_root = './data/sequences/cmu-30/amc'
 filename_asf = '*.asf'
 filename_amc = '*.amc'
 
 dump_root = 'data/motion_images'
-dataset_name = 'hdm05-122_90-10'
+dataset_name = 'cmu-30_80-20'
 
 # Indices constants for body parts that define normalized orientation of the skeleton
 # left -> hip_left
@@ -26,7 +26,7 @@ RIGHT_IDX = 6
 UP_IDX = 11
 
 # --- Loading Sequences and preprocessing
-seqs = load_seqs_asf_amc(src_root, filename_asf, filename_amc)
+seqs = load_seqs_asf_amc_cmu(src_root, filename_asf, filename_amc)
 labeled_sequences_dict = {}
 
 # Init Lists to store X,Y,Z coordinates seperately in order to determine usefull min/max values for color mapping
@@ -36,7 +36,6 @@ z = []
 for seq in seqs:
     print(f'Processing: {seq.name}')
     # Normalization
-    # * Body Part Indices -> 1 = left hip; 6 = right hip
     seq.norm_center_positions()
     seq.norm_relative_to_positions((seq.positions[:, LEFT_IDX, :] + seq.positions[:, RIGHT_IDX, :]) * 0.5)
     seq.norm_orientation(seq.positions[0, LEFT_IDX], seq.positions[0, RIGHT_IDX], seq.positions[0, UP_IDX])
@@ -55,7 +54,7 @@ train_seqs = []
 val_seqs = []
 # Split class sequences into train/val sets
 for label in labeled_sequences_dict.keys():
-    label_split = train_test_split(labeled_sequences_dict[label], test_size=0.1, random_state=42)
+    label_split = train_test_split(labeled_sequences_dict[label], test_size=0.2, random_state=42)
     train_seqs.extend(label_split[0])
     val_seqs.extend(label_split[1])
 
@@ -96,9 +95,9 @@ def filter_outliers_iqr(data: 'np.ndarray', factor: float = 1.5):
 x_iqr_factor = 2.5
 y_iqr_factor = 2.5
 z_iqr_factor = 3.5
-x = filter_outliers_iqr(x, factor=2.5)
-y = filter_outliers_iqr(y, factor=2.5)
-z = filter_outliers_iqr(z, factor=3.5)
+x = filter_outliers_iqr(x, factor=x_iqr_factor)
+y = filter_outliers_iqr(y, factor=y_iqr_factor)
+z = filter_outliers_iqr(z, factor=z_iqr_factor)
 
 xmin = x.min()
 xmax = x.max()
