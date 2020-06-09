@@ -5,7 +5,7 @@ import sklearn.preprocessing as preprocessing
 
 
 def get_angle(vec1, vec2):
-    """Returns the angle between vectors vec1 and vec2 (normalized) in degrees
+    """Returns the angle between vectors vec1 and vec2 (normalized) in radians
 
     Args:
         vec1 (np.ndarray): A 3-D vector whose direction defines an angle of zero.
@@ -26,17 +26,17 @@ def get_angle_batch(vec1, vec2):
     return np.arccos(dot_batch(vec1, vec2))
 
 
-def get_rotation(vec1, vec2):
+def get_rotation(vec_from, vec_to):
     """Returns a homogenious 4x4 transformation matrix without translation vector that describes the rotational transformation from vec1 to vec2
 
     Args:
-        vec1 (np.ndarray): A 3-D vector whose direction defines the starting point of rotation.
-        vec2 (np.ndarray): A 3-D vectors whose direction defines the end point of rotation.
+        vec_from (np.ndarray): A 3-D vector whose direction defines the starting point of rotation.
+        vec_to (np.ndarray): A 3-D vectors whose direction defines the end point of rotation.
     """
-    vec1 = norm(vec1)
-    vec2 = norm(vec2)
-    theta = get_angle(vec1, vec2)
-    rotation_axis = get_perpendicular_vector(vec1, vec2)
+    vec_from = norm(vec_from)
+    vec_to = norm(vec_to)
+    theta = get_angle(vec_to, vec_from)
+    rotation_axis = get_perpendicular_vector(vec_to, vec_from)
     rot_mat = rotation_matrix_4x4(rotation_axis, theta)
     return rot_mat
 
@@ -140,6 +140,7 @@ def norm_batch(v_arr):
 
 
 def mat_mul_batch(arr1, arr2):
+    # ! Identified Bug when using this function in normalize_rotation_first_frame !
     """Performs an element-wise Matrix multiplication for each element in the given arrays.
 
     The batch-wise matrix multiplication is equivalent to arr1 @ arr2 for each element in arr1 and arr2 respectively.
@@ -150,6 +151,7 @@ def mat_mul_batch(arr1, arr2):
         arr2 (np.ndarray): An array of vectors or matrices (1-D or 2-D np.arrays)
 
     """
+    print(f'{arr1.ndim}:{arr2.ndim}')
     if len(arr1) != len(arr2):
         raise ValueError('The number of elements in the first dimension of parameters a and b should be equal.')
     else:

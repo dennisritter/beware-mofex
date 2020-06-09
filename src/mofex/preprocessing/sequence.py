@@ -7,6 +7,7 @@ from ezc3d import c3d
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.preprocessing.transformations as transformations
 import mofex.preprocessing.normalizations as norm
+import mofex.acm_asf_parser.amc_parser as amc_asf_parser
 
 
 # Ignore pylint 'Function redefined warning' as Sequence is imported for pyright
@@ -226,6 +227,7 @@ class Sequence:
 
         return cls(positions, name=name, desc=desc)
 
+    # ! Do not use -> varying number of body parts in sequences
     @classmethod
     def from_hdm05_c3d_file(cls, path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
         """Loads the Positions of the a .c3d file and returns an Sequence object.
@@ -239,22 +241,99 @@ class Sequence:
         c3d_object = c3d(str(path))
         positions = c3d_object['data']['points']
         positions = positions.swapaxes(0, 2)[:, :, :3]
+
+        # Swap X / Y
+        positions[:, :, [0, 1]] = positions[:, :, [1, 0]]
+        # Negate Y
+        positions[:, :, 1] = -positions[:, :, 1]
+        # * For some reason, all body part positions are the same in the last frame, so we just remove it
+        return cls(positions[0:-1], name=name, desc=desc)
+
+    @classmethod
+    def from_hdm05_asf_amc_files(cls, asf_path: str, amc_path: str, name: str = 'Sequence', desc: str = None) -> 'Sequence':
+        """Loads MoCap data from HDM05 amc and asf files and returns an Sequence object including cody part coordinates.
+
+        Args:
+            asf_path (str): Path to the asf file. Includes available Joints and hierarchy.
+            amc_path (str): Path to the amc file. Includes motions.
+
+        Returns:
+            Sequence: a new Sequence instance from the given input.
+        """
+        joints = amc_asf_parser.parse_asf(asf_path)
+        motions = amc_asf_parser.parse_amc(amc_path)
+
+        body_parts = {
+            'root': 0,
+            'lhipjoint': 1,
+            'lfemur': 2,
+            'ltibia': 3,
+            'lfoot': 4,
+            'ltoes': 5,
+            'rhipjoint': 6,
+            'rfemur': 7,
+            'rtibia': 8,
+            'rfoot': 9,
+            'rtoes': 10,
+            'lowerback': 11,
+            'upperback': 12,
+            'thorax': 13,
+            'lowerneck': 14,
+            'upperneck': 15,
+            'head': 16,
+            'lclavicle': 17,
+            'lhumerus': 18,
+            'lradius': 19,
+            'lwrist': 20,
+            'lhand': 21,
+            'lfingers': 22,
+            'lthumb': 23,
+            'rclavicle': 24,
+            'rhumerus': 25,
+            'rradius': 26,
+            'rwrist': 27,
+            'rhand': 28,
+            'rfingers': 29,
+            'rthumb': 30
+        }
+
+        positions = []
+        for frame in range(len(motions)):
+            joints['root'].set_motion(motions[frame])
+            positions.append([joints[joint].coordinate for joint in joints.keys()])
+        positions = np.array(positions).squeeze()
+
+        # Swap X / Y
+        positions[:, :, [1, 2]] = positions[:, :, [2, 1]]
+        # Negate Y
+        positions[:, :, 1] = -positions[:, :, 1]
         return cls(positions, name=name, desc=desc)
 
-    def merge(self, sequence) -> 'Sequence':
+    def append(self, sequence) -> 'Sequence':
         """Returns the merged two sequences.
 
-        Raises ValueError if either the body_parts, the poseformat or the body_parts do not match!
+        Raises ValueError if shapes of the positions property do not fit together. 
         """
-        if self.body_parts != sequence.body_parts:
-            raise ValueError('body_parts of both sequences do not match!')
+        if self.positions.shape[1] != sequence.positions.shape[1] or self.positions.shape[2] != sequence.positions.shape[2]:
+            raise ValueError(
+                f'sequence.position shapes {self.positions.shape} and {sequence.positions.shape} do not fit together.\nPlease ensure that the second and third axes share the same dimensionality.'
+            )
 
         # Copy the given sequence to not change it implicitly
         sequence = sequence[:]
-        # concatenate positions, timestamps and angles
+        # concatenate positions
         self.positions = np.concatenate((self.positions, sequence.positions), axis=0)
 
         return self
+
+    def split_into_batches(self, size: int = 10):
+        """ Splits this sequence into batches of specified size. Returns a consecutive list of sequences with length of the given size. 
+        
+            Args:
+                size (int) = 10: The size of the batches. 
+        """
+        batches = [self.positions[i:i + size] for i in range(0, len(self.positions), size)]
+        return [Sequence(batch, f'{self.name}__batch-{i}', f'{self.desc}__batch-{i}') for i, batch in enumerate(batches)]
 
     def to_motionimg(
             self,
@@ -265,7 +344,6 @@ class Sequence:
             show_img=False,
             show_skeleton=False,
     ) -> np.ndarray:
-        # TODO: Calculate 'smart' minmax_pos values
         """ Returns a Motion Image, that represents this sequences' positions.
 
             Creates an Image from 3-D position data of motion sequences.
@@ -309,6 +387,6 @@ class Sequence:
         self.positions = norm.relative_to_positions(self.positions, root_positions=positions)
         return
 
-    def norm_orientation_first_pose_frontal_to_camera(self, hip_l_idx, hip_r_idx):
-        self.positions = norm.orientation_first_pose_frontal_to_camera(self.positions, hip_l_idx, hip_r_idx)
+    def norm_orientation(self, left, right, up):
+        self.positions = norm.orientation(self.positions, left, right, up)
         return
