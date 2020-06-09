@@ -2,7 +2,7 @@
 
 MOFEX is a Feature Extractor for motion capturing data.
 
-## Desription
+## Description
 
 ### Summary
 
@@ -10,12 +10,13 @@ The process is heavily based on the paper *[Effective and efficient similarity s
 
 The Motion Feature Extractor (MOFEX) generates feature vectors from 3-D Motion Capturing Data that represent the recorded motion. Therefore, the following steps are executed:
 
-1. Generate 'Motion Images' from 3-D MoCap Data
-2. Finetune ImageNet pretrained CNN to classify generated Motion Images
-3. Remove classification layer (last layer) from CNN
-4. (optional) Add new last layer with desired output dimensionality
-5. Create Motion Feature Vectors by processing Images in forward pass of the finetuned CNN.
-6. Use Feature Vectors as Motion representation for several tasks
+1. Normalize MoCap Data
+2. Generate 'Motion Images' from 3-D MoCap Data
+3. Finetune ImageNet pretrained CNN to classify generated Motion Images
+4. Remove classification layer (last layer) from CNN
+5. (optional) Add new last layer with desired output dimensionality
+6. Create Motion Feature Vectors by processing Images in forward pass of the finetuned CNN.
+7. Use Feature Vectors as Motion representation for several tasks
 
 ### Motivation
 
