@@ -13,6 +13,7 @@ from mofex.load_sequences import load_seqs_asf_amc_cmu
 src_root = './data/sequences/cmu-30/amc'
 filename_asf = '*.asf'
 filename_amc = '*.amc'
+output_size = (256, 256)
 
 dump_root = 'data/motion_images'
 dataset_name = 'cmu-30_80-20'
@@ -125,7 +126,7 @@ for seq in train_seqs:
         os.makedirs(os.path.abspath(class_dir))
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
-    img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+    img = seq.to_motionimg(output_size=output_size, minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
     cv2.imwrite(out, img)
 # Validation Set
 for seq in val_seqs:
@@ -136,7 +137,7 @@ for seq in val_seqs:
         os.makedirs(os.path.abspath(class_dir))
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
-    img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+    img = seq.to_motionimg(output_size=output_size, minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
     cv2.imwrite(out, img)
 
 # --- Create Coordinate Histogram

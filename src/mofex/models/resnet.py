@@ -81,3 +81,19 @@ def load_resnet101_finetuned_hdm05_122_9010(remove_last_layer=True, state_dict_p
         model = torch.nn.Sequential(*list(model.children())[:-1])
 
     return model
+
+
+def load_resnet101_finetuned_cmu30_8020(remove_last_layer=True, state_dict_path=None):
+    if not os.path.isfile(state_dict_path):
+        print(f'The state_dict_path parameter of load_resnet101_finetuned function does not lead to a file. Exiting program.')
+        exit()
+    if not str(state_dict_path).endswith('.pt'):
+        print(f'The state_dict_path parameter of load_resnet101_finetuned function does not lead to a .pt file. Exiting program.')
+        exit()
+    model = models.resnet101(pretrained=False)
+    model.fc = torch.nn.Linear(2048, 30)
+    model.load_state_dict(torch.load(state_dict_path))
+    if remove_last_layer:
+        model = torch.nn.Sequential(*list(model.children())[:-1])
+
+    return model

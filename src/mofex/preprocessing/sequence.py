@@ -344,7 +344,6 @@ class Sequence:
             show_img=False,
             show_skeleton=False,
     ) -> np.ndarray:
-        # TODO: Calculate 'smart' minmax_pos values
         """ Returns a Motion Image, that represents this sequences' positions.
 
             Creates an Image from 3-D position data of motion sequences.

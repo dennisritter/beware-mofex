@@ -22,11 +22,13 @@ import mofex.model_trainer as model_trainer
 # Models to choose from [resnet18, resnet50, resnet101]
 model_name = 'resnet101'
 # Dataset name. Choose from [hdm05-122_90-10]
-dataset_name = 'hdm05-122_90-10'
+dataset_name = 'cmu-30_80-20_256'
 # Top level data directory. Here we assume the format of the directory conforms to the ImageFolder structure
-data_dir = "./data/motion_images/hdm05-122_90-10"
+data_dir = "./data/motion_images/cmu-30_80-20_256"
+# The squared input size of motion images
+input_size = 256
 # Number of classes in the dataset
-num_classes = 122
+num_classes = 30
 # Number of epochs to train for
 num_epochs = 25
 # Batch size for training (change depending on how much memory you have)
@@ -37,7 +39,7 @@ train_last_layer_only = False
 # ----- Training Setup
 
 # Initialize the model
-model, input_size = model_loader.initialize_model(model_name, num_classes)
+model, input_size = model_loader.initialize_model(model_name, num_classes, input_size=input_size)
 
 # Data augmentation and normalization for training and validation repectively
 # TODO: What else could we do to optimize the data for training?
