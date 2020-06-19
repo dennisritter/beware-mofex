@@ -39,10 +39,13 @@ RIGHT_IDX = 6
 UP_IDX = 11
 
 # Determine minmax valuzes for motion image mapping
-xyz_minmax = xyz_minmax_coords(all_seqs, [2.5, 2.5, 3.5])
-xmin, xmax = xyz_minmax[0]
-ymin, ymax = xyz_minmax[1]
-zmin, zmax = xyz_minmax[2]
+# xyz_minmax = xyz_minmax_coords(all_seqs, [2.5, 2.5, 3.5])
+# xmin, xmax = xyz_minmax[0]
+# ymin, ymax = xyz_minmax[1]
+# zmin, zmax = xyz_minmax[2]
+xmin, xmax = (-14.772495736531305, 14.602030756418097)
+ymin, ymax = (-14.734704969722216, 14.557769829141042)
+zmin, zmax = (-19.615324010444805, 19.43983405425556)
 
 
 def split_sequence(long_seq: 'Sequence', overlap: float = 0.8, subseq_size: int = 100) -> list:
@@ -58,7 +61,7 @@ def split_sequence(long_seq: 'Sequence', overlap: float = 0.8, subseq_size: int 
 q_seq.norm_center_positions()
 q_seq.norm_relative_to_positions((q_seq.positions[:, LEFT_IDX, :] + q_seq.positions[:, RIGHT_IDX, :]) * 0.5)
 q_seq.norm_orientation(q_seq.positions[0, LEFT_IDX], q_seq.positions[0, RIGHT_IDX], q_seq.positions[0, UP_IDX])
-q_mimg = q_seq.to_motionimg(output_size=(256, 256), minmax_pos_x=xyz_minmax[0], minmax_pos_y=xyz_minmax[1], minmax_pos_z=xyz_minmax[2])
+q_mimg = q_seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
 seqs = split_sequence(long_seq, overlap=0.8, subseq_size=len(q_seq))
 
 split_mimgs = []
@@ -66,7 +69,7 @@ for seq in seqs:
     seq.norm_center_positions()
     seq.norm_relative_to_positions((seq.positions[:, LEFT_IDX, :] + seq.positions[:, RIGHT_IDX, :]) * 0.5)
     seq.norm_orientation(seq.positions[0, LEFT_IDX], seq.positions[0, RIGHT_IDX], seq.positions[0, UP_IDX])
-    split_mimgs.append(seq.to_motionimg(output_size=(256, 256), minmax_pos_x=xyz_minmax[0], minmax_pos_y=xyz_minmax[1], minmax_pos_z=xyz_minmax[2]))
+    split_mimgs.append(seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax)))
 
 # Get Feature Vectors
 dataset_name = 'hdm05-122_90-10'
@@ -96,7 +99,8 @@ print(distances)
 cv2.imshow('img', q_mimg)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-for img in split_mimgs:
+for i, img in enumerate(split_mimgs):
+    print(distances[i])
     cv2.imshow('img', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
