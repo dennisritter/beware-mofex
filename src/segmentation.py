@@ -5,6 +5,7 @@ import os
 import random
 import math
 from datetime import datetime
+import time
 from pathlib import Path
 import torch
 from torchvision import transforms
@@ -13,22 +14,37 @@ from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.models.resnet as resnet
 import mofex.feature_vectors as featvec
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import mofex.acm_asf_parser.amc_parser as amc_asf_parser
 from mofex.preprocessing.helpers import xyz_minmax_coords
 import mofex.model_loader as model_loader
+"""
+Segmentation Approach
+1. Take 1/2/4/8/16/32/64 (key_len) frame motion sequence key_gt of ground truth sequence seq_gt
+2. Segment long sequence (seq_q) into short sequences (key_q) of length key_len
+3. Compare key_gt and key_q.
+4. Show distances in line graph   
+"""
 
 ### Find/Locate subsequences in long_seq that are similar to q_seq
 
 asf_path = './data/sequences/hdm05-122/amc/squat1Reps/HDM_bd.asf'
 amc_path = './data/sequences/hdm05-122/amc/squat1Reps/HDM_bd_squat1Reps_001_120.amc'
-q_seq = Sequence.from_hdm05_asf_amc_files(asf_path, amc_path)
+seq_gt = Sequence.from_hdm05_asf_amc_files(asf_path, amc_path)
 
-asf_path = './data/sequences/hdm05-122/amc/squat3Reps/HDM_bd.asf'
-amc_path = './data/sequences/hdm05-122/amc/squat3Reps/HDM_bd_squat3Reps_001_120.amc'
-long_seq = Sequence.from_hdm05_asf_amc_files(asf_path, amc_path)
+## Analyze one sequence
+asf_path = './data/sequences/hdm05-122/amc/squat3Reps/HDM_tr.asf'
+# amc_path = './data/sequences/hdm05-122/amc/squat3Reps/HDM_bk_squat3Reps_*.amc'
+# seq_q = Sequence.from_hdm05_asf_amc_files(asf_path, path)
 
-# We need a list of all sequences to determine minmax values of coordinates
-all_seqs = [q_seq, long_seq]
+root = './data/sequences/hdm05-122/amc/squat3Reps/'
+seqs = []
+for filename in Path(root).rglob('HDM_tr*.amc'):
+    print(filename)
+    seqs.append(Sequence.from_hdm05_asf_amc_files(asf_path, filename))
+for seq in seqs[1:]:
+    seqs[0].append(seq)
+seq_q = seqs[0]
 
 # Indices constants for body parts that define normalized orientation of the skeleton
 # left -> hip_left
@@ -38,69 +54,81 @@ RIGHT_IDX = 6
 # up -> lowerback
 UP_IDX = 11
 
-# Determine minmax valuzes for motion image mapping
-# xyz_minmax = xyz_minmax_coords(all_seqs, [2.5, 2.5, 3.5])
-# xmin, xmax = xyz_minmax[0]
-# ymin, ymax = xyz_minmax[1]
-# zmin, zmax = xyz_minmax[2]
+# Min/Max values used for the color mapping when transforming sequences to motion images
+# min values are mapped to RGB(0,0,0), max values to RGB(255,255,255)
 xmin, xmax = (-14.772495736531305, 14.602030756418097)
 ymin, ymax = (-14.734704969722216, 14.557769829141042)
 zmin, zmax = (-19.615324010444805, 19.43983405425556)
 
 
-def split_sequence(long_seq: 'Sequence', overlap: float = 0.8, subseq_size: int = 100) -> list:
+def split_sequence(long_seq: 'Sequence', overlap: float = 0.0, subseq_size: int = 1) -> list:
     if overlap < 0.0 or overlap > 0.99:
         raise ValueError('overlap parameter must be a value between [0.0, 0.99]')
     step_size = int(subseq_size - subseq_size * overlap)
+    if step_size == 0:
+        raise ValueError('The formula int(subseq_size - subseq_size * overlap) should not equal 0. Choose params that fulfill this condition.')
     n_steps = math.floor((len(long_seq) - subseq_size) / step_size)
     seqs = [long_seq[step * step_size:step * step_size + subseq_size] for step in range(0, n_steps)]
     return seqs
 
 
-# Normalize and get Motion Images
-q_seq.norm_center_positions()
-q_seq.norm_relative_to_positions((q_seq.positions[:, LEFT_IDX, :] + q_seq.positions[:, RIGHT_IDX, :]) * 0.5)
-q_seq.norm_orientation(q_seq.positions[0, LEFT_IDX], q_seq.positions[0, RIGHT_IDX], q_seq.positions[0, UP_IDX])
-q_mimg = q_seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
-seqs = split_sequence(long_seq, overlap=0.8, subseq_size=len(q_seq))
+subseq_len_list = [4, 8, 16, 32]
+fig = make_subplots(rows=len(subseq_len_list), cols=1)
+for row, subseq_len in enumerate(subseq_len_list):
+    start = time.time()
 
-split_mimgs = []
-for seq in seqs:
-    seq.norm_center_positions()
-    seq.norm_relative_to_positions((seq.positions[:, LEFT_IDX, :] + seq.positions[:, RIGHT_IDX, :]) * 0.5)
-    seq.norm_orientation(seq.positions[0, LEFT_IDX], seq.positions[0, RIGHT_IDX], seq.positions[0, UP_IDX])
-    split_mimgs.append(seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax)))
+    key_gt = seq_gt[0:subseq_len]
+    # Normalize and get Motion Images
+    key_gt.norm_center_positions()
+    key_gt.norm_relative_to_positions((key_gt.positions[:, LEFT_IDX, :] + key_gt.positions[:, RIGHT_IDX, :]) * 0.5)
+    key_gt.norm_orientation(key_gt.positions[0, LEFT_IDX], key_gt.positions[0, RIGHT_IDX], key_gt.positions[0, UP_IDX])
+    mi_gt = key_gt.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
 
-# Get Feature Vectors
-dataset_name = 'hdm05-122_90-10'
-# CNN Model name -> model_dataset-numclasses_train-val-ratio
-model_name = 'resnet101_hdm05-122_90-10'
-# The CNN Model for Feature Vector generation
-model = model_loader.load_trained_model(model_name=model_name,
-                                        remove_last_layer=True,
-                                        state_dict_path=f'./data/trained_models/{dataset_name}/{model_name}_e25.pt')
-# The models output size (Feature Vector length)
-feature_size = 2048
-# Transforms
-preprocess = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize(256),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+    mi_q_list = []
+    seq_q_split = split_sequence(seq_q, overlap=0, subseq_size=subseq_len)
+    for seq_q_part in seq_q_split:
+        seq_q_part.norm_center_positions()
+        seq_q_part.norm_relative_to_positions((seq_q_part.positions[:, LEFT_IDX, :] + seq_q_part.positions[:, RIGHT_IDX, :]) * 0.5)
+        seq_q_part.norm_orientation(seq_q_part.positions[0, LEFT_IDX], seq_q_part.positions[0, RIGHT_IDX], seq_q_part.positions[0, UP_IDX])
+        mi_q_list.append(seq_q_part.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax)))
 
-q_featvec = featvec.load_from_motion_imgs(motion_images=[q_mimg], model=model, feature_size=feature_size, preprocess=preprocess)
-split_featvecs = featvec.load_from_motion_imgs(motion_images=split_mimgs, model=model, feature_size=feature_size, preprocess=preprocess)
+    # Get Feature Vectors
+    dataset_name = 'hdm05-122_90-10'
+    # CNN Model name -> model_dataset-numclasses_train-val-ratio
+    model_name = 'resnet101_hdm05-122_90-10'
+    # The CNN Model for Feature Vector generation
+    model = model_loader.load_trained_model(model_name=model_name,
+                                            remove_last_layer=True,
+                                            state_dict_path=f'./data/trained_models/{dataset_name}/{model_name}_e25.pt')
+    # The models output size (Feature Vector length)
+    feature_size = 2048
+    # Transforms
+    preprocess = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
 
-# Determine distances between q_sequence and split sequences
-distances = [np.linalg.norm(q_featvec - split_featvec) for split_featvec in split_featvecs]
-print(distances)
-cv2.imshow('img', q_mimg)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
-for i, img in enumerate(split_mimgs):
-    print(distances[i])
-    cv2.imshow('img', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    featvec_gt = featvec.load_from_motion_imgs(motion_images=[mi_gt], model=model, feature_size=feature_size, preprocess=preprocess)
+    featvec_q_list = featvec.load_from_motion_imgs(motion_images=mi_q_list, model=model, feature_size=feature_size, preprocess=preprocess)
+
+    # Determine distances between q_sequence and split sequences
+    distances = [np.linalg.norm(featvec_gt - featvec_q) for featvec_q in featvec_q_list]
+
+    end = time.time()
+    elapsed = end - start
+    print(f'Subsequence length: {subseq_len} ')
+    print(f'Measured distances: {len(distances)} ')
+    print(f'Computation time: {elapsed}s ')
+
+    x_data = np.arange(len(distances))
+    y_data = distances
+
+    fig.append_trace(go.Scatter(x=x_data, y=y_data, name=f'subseq_len = {subseq_len}'), row=row + 1, col=1)
+
+fig.update_layout(height=200 * len(subseq_len_list),
+                  width=1000,
+                  title_text="Distances between first n frames of seq_gt and all segments of seq_q for different subseq length.")
+fig.show()
