@@ -15,6 +15,8 @@ import torch
 from torchvision import transforms
 
 
+# ! Deprecated, don't use until refactored
+# TODO: Refactor and make sure correct parameters etc. are chosen
 def load_from_sequences(sequences: list, cnn_model, cnn_preprocess, cnn_output_size=512) -> list:
     start = datetime.now()
     feature_vectors = []
@@ -41,6 +43,7 @@ def load_from_sequences(sequences: list, cnn_model, cnn_preprocess, cnn_output_s
     return feature_vectors
 
 
+# ! Deprecated, don't use until refactored
 def load_from_sequences_dir(path: str, tracking_type: str, cnn_model, cnn_preprocess) -> list:
     start = datetime.now()
     ### Load Sequences
@@ -71,6 +74,27 @@ def load_from_file(path: str) -> list:
     return feature_vectors
 
 
+def load_from_motion_imgs(motion_images, model, feature_size, preprocess):
+    ### Get feature Vectors from CNN
+    model.eval()
+    # Detect if GPU available and add model to it
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    feature_vectors = []
+    for img in motion_images:
+        img_tensor = torch.from_numpy(img)
+        input_tensor = preprocess(img)
+        # ? What exactly happens here?
+        input_batch = input_tensor.unsqueeze(0)  # create a mini-batch as expected by the model
+        input_batch = input_batch.to(device)
+
+        output = model(input_batch)
+        output = output.cpu().detach().numpy().reshape((feature_size))
+        feature_vectors.append(output)
+    return feature_vectors
+
+
+# ! Deprecated, don't use until refactored
 def dump_from_motion_images_train_val(in_path, model, model_name, feature_size, dataset_name, preprocess):
     """ Saves Feature Vector JSON files under ./data/feature_vectors/<dataset_name>/<model_name>/<model_name>_[train,val].json
 
