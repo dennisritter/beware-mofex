@@ -2,6 +2,7 @@
 import json
 import copy
 import numpy as np
+import math
 import cv2
 from ezc3d import c3d
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
@@ -335,12 +336,30 @@ class Sequence:
         batches = [self.positions[i:i + size] for i in range(0, len(self.positions), size)]
         return [Sequence(batch, f'{self.name}__batch-{i}', f'{self.desc}__batch-{i}') for i, batch in enumerate(batches)]
 
+    def split(self, overlap: float = 0.0, subseq_size: int = 1) -> list:
+        """ Splits this sequence into batches of specified size and with defined overlap to each other. Returns a consecutive list of sequences with length of the given size. 
+        
+            Args:
+                overlap (float) = 0.0: How much of a batch overlaps neighboured batches.
+                subseq_size (int) = 1: The size of the batches. 
+        """
+        if overlap < 0.0 or overlap > 0.99:
+            raise ValueError('Overlap parameter must be a value between [0.0, 0.99].')
+        step_size = int(subseq_size - subseq_size * overlap)
+        if step_size > len(self):
+            raise ValueError('Step_size parameter should be smaller that this sequences length.')
+        if step_size == 0:
+            raise ValueError('The formula int(subseq_size - subseq_size * overlap) should not equal 0. Choose params that fulfill this condition.')
+        n_steps = math.floor((len(self) - subseq_size) / step_size)
+        seqs = [self[step * step_size:step * step_size + subseq_size] for step in range(0, n_steps)]
+        return seqs
+
     def to_motionimg(
             self,
-            output_size: (int, int) = (256, 256),
-            minmax_pos_x: (int, int) = (-1000, 1000),
-            minmax_pos_y: (int, int) = (-1000, 1000),
-            minmax_pos_z: (int, int) = (-1000, 1000),
+            output_size=(256, 256),
+            minmax_pos_x=(-1000, 1000),
+            minmax_pos_y=(-1000, 1000),
+            minmax_pos_z=(-1000, 1000),
             show_img=False,
             show_skeleton=False,
     ) -> np.ndarray:
