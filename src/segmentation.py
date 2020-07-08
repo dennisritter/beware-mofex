@@ -13,6 +13,7 @@ from mofex.preprocessing.sequence import Sequence
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.models.resnet as resnet
 import mofex.feature_vectors as featvec
+from scipy.signal import argrelextrema, savgol_filter
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import mofex.acm_asf_parser.amc_parser as amc_asf_parser
@@ -34,17 +35,19 @@ seq_gt = Sequence.from_hdm05_asf_amc_files(asf_path, amc_path)
 
 ## Analyze one sequence
 asf_path = './data/sequences/hdm05-122/amc/squat3Reps/HDM_tr.asf'
-# amc_path = './data/sequences/hdm05-122/amc/squat3Reps/HDM_bk_squat3Reps_*.amc'
-# seq_q = Sequence.from_hdm05_asf_amc_files(asf_path, path)
+# amc_path = './data/sequences/hdm05-122/amc/squat1Reps/HDM_tr_squat1Reps_049_120.amc'
+amc_path = './data/sequences/hdm05-122/amc/squat3Reps/HDM_tr_squat3Reps_013_120.amc'
+seq_q = Sequence.from_hdm05_asf_amc_files(asf_path, amc_path)
 
-root = './data/sequences/hdm05-122/amc/squat3Reps/'
-seqs = []
-for filename in Path(root).rglob('HDM_tr*.amc'):
-    print(filename)
-    seqs.append(Sequence.from_hdm05_asf_amc_files(asf_path, filename))
-for seq in seqs[1:]:
-    seqs[0].append(seq)
-seq_q = seqs[0]
+## Analyze long, appended sequence
+# root = './data/sequences/hdm05-122/amc/squat3Reps/'
+# seqs = []
+# for filename in Path(root).rglob('HDM_tr*.amc'):
+#     print(filename)
+#     seqs.append(Sequence.from_hdm05_asf_amc_files(asf_path, filename))
+# for seq in seqs[1:]:
+#     seqs[0].append(seq)
+# seq_q = seqs[0]
 
 # Indices constants for body parts that define normalized orientation of the skeleton
 # left -> hip_left
@@ -72,18 +75,24 @@ def split_sequence(long_seq: 'Sequence', overlap: float = 0.0, subseq_size: int 
     return seqs
 
 
-subseq_len_list = [4, 8, 16, 32]
-fig = make_subplots(rows=len(subseq_len_list), cols=1)
+subseq_len_list = [8]
+savgol_windows = [11, 21, 31, 41, 51]
+
+fig_dist = make_subplots(rows=len(subseq_len_list), cols=1)
+fig_savgol = make_subplots(rows=len(savgol_windows), cols=1)
 for row, subseq_len in enumerate(subseq_len_list):
     start = time.time()
 
-    key_gt = seq_gt[0:subseq_len]
+    ## Get first frames of Ground Truth to search for similar segments in a long sequence
     # Normalize and get Motion Images
+    key_gt = seq_gt[0:subseq_len]
     key_gt.norm_center_positions()
     key_gt.norm_relative_to_positions((key_gt.positions[:, LEFT_IDX, :] + key_gt.positions[:, RIGHT_IDX, :]) * 0.5)
     key_gt.norm_orientation(key_gt.positions[0, LEFT_IDX], key_gt.positions[0, RIGHT_IDX], key_gt.positions[0, UP_IDX])
     mi_gt = key_gt.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
 
+    ## Split long sequence into small segments
+    # Normalize and get Motion Images
     mi_q_list = []
     seq_q_split = split_sequence(seq_q, overlap=0, subseq_size=subseq_len)
     for seq_q_part in seq_q_split:
@@ -110,7 +119,7 @@ for row, subseq_len in enumerate(subseq_len_list):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
-
+    # Make feature vectors from Motion Images
     featvec_gt = featvec.load_from_motion_imgs(motion_images=[mi_gt], model=model, feature_size=feature_size, preprocess=preprocess)
     featvec_q_list = featvec.load_from_motion_imgs(motion_images=mi_q_list, model=model, feature_size=feature_size, preprocess=preprocess)
 
@@ -119,16 +128,38 @@ for row, subseq_len in enumerate(subseq_len_list):
 
     end = time.time()
     elapsed = end - start
+
+    x_data = np.arange(len(distances))
+    y_data = distances
+    fig_dist.append_trace(go.Scatter(x=x_data, y=y_data, name=f'subseq_len = {subseq_len}'), row=row + 1, col=1)
     print(f'Subsequence length: {subseq_len} ')
     print(f'Measured distances: {len(distances)} ')
     print(f'Computation time: {elapsed}s ')
 
-    x_data = np.arange(len(distances))
-    y_data = distances
+    ## Smoothing and counting reps
+    for sav_i, savgol_win in enumerate(savgol_windows):
+        savgol_distances = savgol_filter(distances, savgol_win, 3, mode='nearest')
+        savgol_distance_maxima = argrelextrema(savgol_distances, np.greater_equal, order=5)[0]
+        savgol_distance_minima = argrelextrema(savgol_distances, np.less_equal, order=5)[0]
+        print(f'savgol_distance_minima: {savgol_distance_minima}')
+        print(f'savgol_distance_maxima: {savgol_distance_maxima}')
 
-    fig.append_trace(go.Scatter(x=x_data, y=y_data, name=f'subseq_len = {subseq_len}'), row=row + 1, col=1)
+        x_data_savgol = x_data = np.arange(len(distances))
+        y_data_savgol = savgol_distances
+        fig_savgol.append_trace(go.Scatter(x=x_data_savgol, y=y_data_savgol, name=f'savgol_win = {savgol_win}, subseq_len = {subseq_len}'),
+                                row=sav_i + 1,
+                                col=1)
+        # Plot Minima
+        min_dists = [savgol_distances[idx] for idx in savgol_distance_minima]
+        fig_savgol.append_trace(
+            go.Scatter(x=savgol_distance_minima, y=min_dists, mode='markers', marker_color='red'),
+            row=sav_i + 1,
+            col=1,
+        )
 
-fig.update_layout(height=200 * len(subseq_len_list),
-                  width=1000,
-                  title_text="Distances between first n frames of seq_gt and all segments of seq_q for different subseq length.")
-fig.show()
+fig_dist.update_layout(height=500 * len(subseq_len_list),
+                       width=1000,
+                       title_text="Distances between first n frames of seq_gt and all segments of seq_q for different subseq length.")
+fig_dist.show()
+fig_savgol.update_layout(height=300 * len(savgol_windows), width=1000, title_text="Savgol Smoothed distances and key markings. (3 Squat Repetition Sequence)")
+fig_savgol.show()
