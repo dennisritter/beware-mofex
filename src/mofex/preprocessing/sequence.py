@@ -350,7 +350,7 @@ class Sequence:
             raise ValueError('Step_size parameter should be smaller that this sequences length.')
         if step_size == 0:
             raise ValueError('The formula int(subseq_size - subseq_size * overlap) should not equal 0. Choose params that fulfill this condition.')
-        n_steps = math.floor((len(self) - subseq_size) / step_size)
+        n_steps = math.floor(len(self) / step_size)
         seqs = [self[step * step_size:step * step_size + subseq_size] for step in range(0, n_steps)]
         return seqs
 
