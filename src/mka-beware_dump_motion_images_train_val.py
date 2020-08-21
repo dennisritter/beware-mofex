@@ -4,10 +4,14 @@ import os
 import time
 import math
 from pathlib import Path
+import numpy
 import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
 from mofex.preprocessing.helpers import xyz_minmax_coords
+from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
+import mofex.preprocessing.normalizations as mofex_norm
 
+import mana.utils.math.normalizations as normalizations
 from mana.models.sequence import Sequence
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
 from mana.models.sequence_transforms import SequenceTransforms
@@ -16,19 +20,30 @@ src_root = './data/sequences/mka-beware-1.1/'
 
 dump_root = 'data/motion_images'
 dataset_name = 'mka-beware-1.1'
-
-seq_transforms = SequenceTransforms(SequenceTransforms.mka_to_iisy())
-seq_loader = SequenceLoaderMKA(seq_transforms)
-seq = seq_loader.load(f'{src_root}/squat/squat_1.json')
-seq.to_motionimg(show_img=True)
-
 # Indices constants for body parts that define normalized orientation of the skeleton
+# center -> pelvis
+CENTER_IDX = 0
 # left -> hip_left
 LEFT_IDX = 18
 # right -> hip_right
 RIGHT_IDX = 22
 # up -> spinenavel
 UP_IDX = 1
+
+seq_transforms = SequenceTransforms(SequenceTransforms.mka_to_iisy())
+seq_loader = SequenceLoaderMKA(seq_transforms)
+seq = seq_loader.load(f'{src_root}/squat/squat_1.json')
+
+seq.positions = mofex_norm.center_positions(seq.positions)
+seq.positions = normalizations.pose_position(seq.positions, seq.positions[:, CENTER_IDX, :])
+# ! Does not work as expected :( --> zu ungenau
+# seq.positions = normalizations.pose_orientation(array=seq.positions,
+#                                                 rotation_vectors=seq.positions[0, RIGHT_IDX, :] - seq.positions[0, LEFT_IDX, :],
+#                                                 plane_normals=np.array([0, 1, 0]))
+mofex_norm.orientation(seq.positions, seq.positions[0, LEFT_IDX, :], seq.positions[0, RIGHT_IDX, :], seq.positions[0, UP_IDX, :])
+
+sv = SkeletonVisualizer(seq)
+sv.show()
 
 # # --- Loading Sequences and preprocessing
 # seqs = load_seqs_asf_amc_hdm05(src_root, filename_asf, filename_amc)
