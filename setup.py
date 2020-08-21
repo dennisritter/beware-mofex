@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="mofex-mocap-feature-extractor",
+    name="mofex",
     version="1.0.0",
     author="IISY at Beuth",
     author_email="iisy@beuth-hochschule.de",
@@ -13,8 +13,8 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://gitlab.beuth-hochschule.de/iisy/mofex-mocap-feature-extractor",
     package_dir={'': 'src'},
-    packages=setuptools.find_namespace_packages(where='src'),
-    install_requires=['numpy', 'opencv'],
+    packages=setuptools.find_packages(where='src'),
+    install_requires=['numpy', 'opencv-python'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
