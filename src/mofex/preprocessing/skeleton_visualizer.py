@@ -39,9 +39,9 @@ class SkeletonVisualizer:
             sliders = self._make_sliders()
 
         scene = dict(
-            xaxis=dict(range=[-50, 50], ),
-            yaxis=dict(range=[-50, 50], ),
-            zaxis=dict(range=[-50, 50], ),
+            xaxis=dict(range=[-1000, 1000], ),
+            yaxis=dict(range=[-1000, 1000], ),
+            zaxis=dict(range=[-1000, 1000], ),
             camera=dict(up=dict(x=0, y=0, z=1.25), eye=dict(x=-1.2, y=-1.2, z=1.2)),
         )
 
