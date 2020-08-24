@@ -3,27 +3,31 @@ import mofex.feature_vectors as featvec
 from scipy.signal import argrelextrema, savgol_filter
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import mofex.preprocessing.normalizations as mofex_norm
+import mana.utils.math.normalizations as normalizations
 
 # * Must work for all tracking formats. Add params or find better solution
 # Indices constants for body parts that define normalized orientation of the skeleton
+# center -> pelvis
+CENTER_IDX = 0
 # left -> hip_left
-LEFT_IDX = 1
+LEFT_IDX = 18
 # right -> hip_right
-RIGHT_IDX = 6
-# up -> lowerback
-UP_IDX = 11
+RIGHT_IDX = 22
+# up -> spinenavel
+UP_IDX = 1
 
 # Min/Max values used for the color mapping when transforming sequences to motion images
 # min values are mapped to RGB(0,0,0), max values to RGB(255,255,255)
-xmin, xmax = (-14.772495736531305, 14.602030756418097)
-ymin, ymax = (-14.734704969722216, 14.557769829141042)
-zmin, zmax = (-19.615324010444805, 19.43983405425556)
+xmin, xmax = (-322, 308)
+ymin, ymax = (-217, 329)
+zmin, zmax = (-771, 1271)
 
 
 def _normalize_seq(seq):
-    seq.norm_center_positions()
-    seq.norm_relative_to_positions((seq.positions[:, LEFT_IDX, :] + seq.positions[:, RIGHT_IDX, :]) * 0.5)
-    seq.norm_orientation(seq.positions[0, LEFT_IDX], seq.positions[0, RIGHT_IDX], seq.positions[0, UP_IDX])
+    seq.positions = mofex_norm.center_positions(seq.positions)
+    seq.positions = normalizations.pose_position(seq.positions, seq.positions[:, CENTER_IDX, :])
+    mofex_norm.orientation(seq.positions, seq.positions[0, LEFT_IDX, :], seq.positions[0, RIGHT_IDX, :], seq.positions[0, UP_IDX, :])
     return seq
 
 

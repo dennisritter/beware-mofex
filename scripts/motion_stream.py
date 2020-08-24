@@ -9,16 +9,22 @@ from mofex.load_sequences import load_seqs_asf_amc_hdm05
 from mofex.rep_counter import RepCounter
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+from pathlib import Path
+
+import mana.utils.math.normalizations as normalizations
+from mana.models.sequence import Sequence
+from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
+from mana.models.sequence_transforms import SequenceTransforms
 
 # ! Root directory of motion images. Make sure it includes 'train' and 'val' directory, which then include a directory for each present label in the dataset.
 # ! Structure template: <in_path>/train/<class_name>/motion_img1.png
-dataset_name = 'hdm05-122_90-10'
+dataset_name = 'mka-beware-1.1'
 # CNN Model name -> model_dataset-numclasses_train-val-ratio
-model_name = 'resnet101_hdm05-122_90-10'
+model_name = 'resnet101_mka-beware-1.1'
 # The CNN Model for Feature Vector generation
 model = model_loader.load_trained_model(model_name=model_name,
                                         remove_last_layer=True,
-                                        state_dict_path=f'./data/trained_models/{dataset_name}/{model_name}_e25.pt')
+                                        state_dict_path=f'./data/trained_models/{dataset_name}/{model_name}_e5.pt')
 # The models output size (Feature Vector length
 feature_size = 2048
 # Transforms
@@ -31,10 +37,24 @@ preprocess = transforms.Compose([
 ])
 
 # Root folder for Query Sequence files
-filename_asf = '*.asf'
-filename_amc = '*.amc'
-src_root = './data/sequences/hdm05-122/amc/squat3Reps/'
-seqs = load_seqs_asf_amc_hdm05(src_root, filename_asf, filename_amc)
+# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-02-59-14'  # 19/20
+# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-03-00-12'  # 18/20
+# src_root = './data/sequences/mka-beware-1.1-sets/Dennis/overheadpress/19-08-2020-12-52-22'  # 14/20
+
+seq_transforms = SequenceTransforms(SequenceTransforms.mka_to_iisy())
+seq_loader = SequenceLoaderMKA(seq_transforms)
+# Load sequences
+seqs = []
+for filename in Path(src_root).rglob('*.json'):
+    # print(str(filename).replace('\\', '/').split('/'))
+    filename_split = str(filename).replace('\\', '/').split('/')
+    seq_name = filename_split[-1]  # The filename (eg: 'myname.json')
+    seq_class = filename_split[-2]  # The class (eG: 'squat')
+    # Load
+    seq = seq_loader.load(path=f'{str(filename)}', name=seq_name[:-5], desc=seq_class)
+    print(f'{seq.name}: frames = {len(seq)} ')
+    seqs.append(seq)
+# Append Sequences to one set (one sequence)
 for seq in seqs[1:]:
     seqs[0].append(seq)
 seq_q = seqs[0]
@@ -50,15 +70,15 @@ def fill_queue(queue: Queue, batchsize: int = 10):
 
 
 # Load Ground Truth Sequence
-asf_path = './data/sequences/hdm05-122/amc/squat1Reps/HDM_bd.asf'
-amc_path = './data/sequences/hdm05-122/amc/squat1Reps/HDM_bd_squat1Reps_001_120.amc'
-seq_gt = Sequence.from_hdm05_asf_amc_files(asf_path, amc_path)
-repcounter = RepCounter(seq_gt=seq_gt[0:8], subseq_len=8, savgol_win=21, model=model, feature_size=feature_size, preprocess=preprocess)
+seq_name = 'overheadpress_1.json'
+seq_class = 'overheadpress'
+seq_gt = seq_loader.load(path=f'./data/sequences/mka-beware-1.1/overheadpress/{seq_name}', name=seq_name[:-5], desc=seq_class)
+repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=21, model=model, feature_size=feature_size, preprocess=preprocess)
 
 
 @click.command()
 @click.option("--batchsize", default=10, help="How many frames do you want to send in each package?")
-@click.option("--fps", default=120, help="How many frames per second do you want to stream?")
+@click.option("--fps", default=30, help="How many frames per second do you want to stream?")
 @click.option("--delay", default=0, help="How much delay you want to add between batches?")
 def stream(batchsize, fps, delay):
     click.echo(f'Simulating motion stream:\nFPS: {fps}\nBatchSize: {batchsize}')
@@ -71,7 +91,7 @@ def stream(batchsize, fps, delay):
     while True:
         # time.sleep((batchsize / fps) + delay)
         t += batchsize / fps
-        click.echo(f'[{round(t, 2):.2f}] Get next {batchsize} frames from queue.')
+        # click.echo(f'[{round(t, 2):.2f}] Get next {batchsize} frames from queue.')
 
         # Handle empty queue
         if seq_q_queue.empty():
