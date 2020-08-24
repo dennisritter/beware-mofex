@@ -22,15 +22,15 @@ import mofex.model_trainer as model_trainer
 # Models to choose from [resnet18, resnet50, resnet101]
 model_name = 'resnet101'
 # Dataset name. Choose from [hdm05-122_90-10]
-dataset_name = 'cmu-30_80-20_256'
+dataset_name = 'mka-beware-1.1'
 # Top level data directory. Here we assume the format of the directory conforms to the ImageFolder structure
-data_dir = "./data/motion_images/cmu-30_80-20_256"
+data_dir = "./data/motion_images/mka-beware-1.1"
 # The squared input size of motion images
 input_size = 256
 # Number of classes in the dataset
-num_classes = 30
+num_classes = 7
 # Number of epochs to train for
-num_epochs = 25
+num_epochs = 5
 # Batch size for training (change depending on how much memory you have)
 batch_size = 8
 # Flag for feature extracting. When False, we finetune the whole model,
