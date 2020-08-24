@@ -47,6 +47,8 @@ def load_trained_model(model_name, remove_last_layer=True, state_dict_path='./da
         model = resnet.load_resnet101_finetuned_hdm05_122_9010(state_dict_path=state_dict_path)
     elif model_name == "resnet101_cmu-30_80-20_256":
         model = resnet.load_resnet101_finetuned_cmu30_8020(state_dict_path=state_dict_path)
+    elif model_name == "resnet101_mka-beware-1.1":
+        model = resnet.load_resnet101_finetuned_mka7_9010(state_dict_path=state_dict_path)
     else:
         print("Invalid model name, exiting...")
         exit()
