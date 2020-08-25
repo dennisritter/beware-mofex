@@ -1,29 +1,38 @@
 import numpy as np
-import cv2
-import json
-import os
-import random
-import math
-from datetime import datetime
 from pathlib import Path
-import torch
-from torchvision import transforms
-from mofex.preprocessing.sequence import Sequence
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
-import mofex.models.resnet as resnet
-import mofex.feature_vectors as featvec
-import plotly.graph_objects as go
-import mofex.acm_asf_parser.amc_parser as amc_asf_parser
+import mofex.preprocessing.normalizations as mofex_norm
+import mana.utils.math.normalizations as normalizations
+from mana.models.sequence import Sequence
+from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
+from mana.models.sequence_transforms import SequenceTransforms
 
-asf_path = './data/sequences/hdm05-10/amc/cartwheelLHandStart1Reps/HDM_bd.asf'
-amc_path = './data/sequences/hdm05-10/amc/cartwheelLHandStart1Reps/HDM_bd_cartwheelLHandStart1Reps_003_120.amc'
-seq = Sequence.from_hdm05_asf_amc_files(asf_path, amc_path)
+src_root = './data/sequences/mka-beware-1.1/'
 
-seq.norm_center_positions()
-seq.norm_relative_to_positions((seq.positions[:, 1, :] + seq.positions[:, 6, :]) * 0.5)
-seq.norm_orientation_first_pose_frontal_to_camera(1, 6)
+dump_root = 'data/motion_images'
+dataset_name = 'mka-beware-1.1'
+# Indices constants for body parts that define normalized orientation of the skeleton
+# center -> pelvis
+CENTER_IDX = 0
+# left -> hip_left
+LEFT_IDX = 18
+# right -> hip_right
+RIGHT_IDX = 22
+# up -> spinenavel
+UP_IDX = 1
+seq_transforms = SequenceTransforms(SequenceTransforms.mka_to_iisy())
+seq_loader = SequenceLoaderMKA(seq_transforms)
 
-sv = SkeletonVisualizer(seq)
-sv.show(auto_open=True)
+for filename in Path(src_root).rglob('overheadpress_1.json'):
+    # print(str(filename).replace('\\', '/').split('/'))
+    filename_split = str(filename).replace('\\', '/').split('/')
+    seq_name = filename_split[-1]  # The filename (eg: 'myname.json')
+    seq_class = filename_split[-2]  # The class (eG: 'squat')
+    seq = seq_loader.load(path=f'{str(filename)}', name=seq_name[:-5], desc=seq_class)
+    # Normalize
+    seq.positions = mofex_norm.center_positions(seq.positions)
+    seq.positions = normalizations.pose_position(seq.positions, seq.positions[:, CENTER_IDX, :])
+    mofex_norm.orientation(seq.positions, seq.positions[0, LEFT_IDX, :], seq.positions[0, RIGHT_IDX, :], seq.positions[0, UP_IDX, :])
 
-a = 1
+    sv = SkeletonVisualizer(seq)
+    sv.show(auto_open=True)

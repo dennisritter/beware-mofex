@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy
 import plotly.graph_objects as go
 from sklearn.model_selection import train_test_split
-from mofex.preprocessing.helpers import xyz_minmax_coords
+from mofex.preprocessing.helpers import xyz_minmax_coords, xyz_minmax_coords_per_bodypart
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.preprocessing.normalizations as mofex_norm
 
@@ -15,6 +15,47 @@ import mana.utils.math.normalizations as normalizations
 from mana.models.sequence import Sequence
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
 from mana.models.sequence_transforms import SequenceTransforms
+
+
+def to_motionimg_bp_minmax(
+        seq,
+        output_size=(256, 256),
+        minmax_per_bp: np.ndarray = None,
+        show_img=False,
+) -> np.ndarray:
+    """ Returns a Motion Image, that represents this sequences' positions.
+
+            Creates an Image from 3-D position data of motion sequences.
+            Rows represent a body part (or some arbitrary position instance).
+            Columns represent a frame of the sequence.
+
+            Args:
+                output_size (int, int): The size of the output image in pixels
+                    (height, width). Default=(200,200)
+                minmax_per_bp (int, int): The minimum and maximum xyx-positions.
+                    Mapped to color range (0, 255) for each body part separately.
+        """
+    # Create Image container
+    img = np.zeros((len(seq.positions[0, :]), len(seq.positions), 3), dtype='uint8')
+    # 1. Map (min_pos, max_pos) range to (0, 255) Color range.
+    # 2. Swap Axes of and frames(0) body parts(1) so rows represent body
+    # parts and cols represent frames.
+    for i, bp in enumerate(seq.positions[0]):
+        bp_positions = seq.positions[:, i]
+        x_colors = np.interp(bp_positions[:, 0], [minmax_per_bp[i, 0, 0], minmax_per_bp[i, 0, 1]], [0, 255])
+        img[i, :, 0] = x_colors
+        img[i, :, 1] = np.interp(bp_positions[:, 1], [minmax_per_bp[i, 1, 0], minmax_per_bp[i, 1, 1]], [0, 255])
+        img[i, :, 2] = np.interp(bp_positions[:, 2], [minmax_per_bp[i, 2, 0], minmax_per_bp[i, 2, 1]], [0, 255])
+    img = cv2.resize(img, output_size)
+
+    if show_img:
+        cv2.imshow(seq.name, img)
+        print(f'Showing motion image from [{seq.name}]. Press any key to' ' close the image and continue.')
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    return img
+
+
 # Root folder for Sequence files
 src_root = './data/sequences/mka-beware-1.1/'
 
@@ -58,11 +99,12 @@ for filename in Path(src_root).rglob('*.json'):
 iqr_factor_x = 1.0
 iqr_factor_y = 1.0
 iqr_factor_z = 1.0
-minmax_xyz = xyz_minmax_coords(seqs, [iqr_factor_x, iqr_factor_y, iqr_factor_z], plot_histogram=True)
-print(f'minmax_xyz: {minmax_xyz}')
-xmin, xmax = minmax_xyz[0]
-ymin, ymax = minmax_xyz[1]
-zmin, zmax = minmax_xyz[2]
+
+minmax_xyz = xyz_minmax_coords_per_bodypart(seqs, [iqr_factor_x, iqr_factor_y, iqr_factor_z], plot_histogram=False)
+# print(f'minmax_xyz:\n{minmax_xyz}')
+# xmin, xmax = minmax_xyz[0]
+# ymin, ymax = minmax_xyz[1]
+# zmin, zmax = minmax_xyz[2]
 
 # Split sequences into Train/Val
 train_seqs = []
@@ -78,7 +120,8 @@ minmax_filename = f'{dump_root}/{dataset_name}/minmax_values.txt'
 if not os.path.isdir(f'{dump_root}/{dataset_name}'):
     os.makedirs(f'{dump_root}/{dataset_name}')
 minmax_file = open(minmax_filename, 'w')
-minmax_file.write(f'x: [{xmin}, {xmax}]\ny: [{ymin}, {ymax}]\nz: [{zmin}, {zmax}]')
+# minmax_file.write(f'x: [{xmin}, {xmax}]\ny: [{ymin}, {ymax}]\nz: [{zmin}, {zmax}]')
+minmax_file.write(f'{minmax_xyz}')
 minmax_file.write(f'\n')
 minmax_file.write(f'x_iqr_factor: {iqr_factor_x}\ny_iqr_factor: {iqr_factor_y}\nz_iqr_factor: {iqr_factor_z}')
 minmax_file.close()
@@ -93,7 +136,8 @@ for seq in train_seqs:
         os.makedirs(os.path.abspath(class_dir))
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
-    img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+    # img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+    img = to_motionimg_bp_minmax(seq, output_size=(256, 256), minmax_per_bp=minmax_xyz)
     cv2.imwrite(out, img)
 # Validation Set
 for seq in val_seqs:
@@ -104,5 +148,6 @@ for seq in val_seqs:
         os.makedirs(os.path.abspath(class_dir))
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
-    img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+    # img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+    img = to_motionimg_bp_minmax(seq, output_size=(256, 256), minmax_per_bp=minmax_xyz)
     cv2.imwrite(out, img)

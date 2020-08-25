@@ -5,6 +5,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import mofex.preprocessing.normalizations as mofex_norm
 import mana.utils.math.normalizations as normalizations
+import cv2
 
 # * Must work for all tracking formats. Add params or find better solution
 # Indices constants for body parts that define normalized orientation of the skeleton
@@ -19,9 +20,77 @@ UP_IDX = 1
 
 # Min/Max values used for the color mapping when transforming sequences to motion images
 # min values are mapped to RGB(0,0,0), max values to RGB(255,255,255)
-xmin, xmax = (-322, 308)
-ymin, ymax = (-217, 329)
-zmin, zmax = (-771, 1271)
+minmax_per_bp = np.array([[[-1.000e+00, 1.000e+00], [-1.000e+00, 1.000e+00], [-1.000e+00, 1.000e+00]],
+                          [[-9.000e+00, 7.000e+00], [-1.400e+01, 1.600e+01], [1.740e+02, 1.970e+02]],
+                          [[-1.400e+01, 1.200e+01], [-5.400e+01, 6.600e+01], [3.110e+02, 3.550e+02]],
+                          [[-2.000e+01, 2.900e+01], [-2.130e+02, 2.580e+02], [5.040e+02, 5.940e+02]],
+                          [[-5.300e+01, -1.100e+01], [-1.920e+02, 2.180e+02], [4.790e+02, 5.530e+02]],
+                          [[-2.020e+02, -1.520e+02], [-2.060e+02, 1.920e+02], [4.300e+02, 5.850e+02]],
+                          [[-3.770e+02, -1.540e+02], [-3.590e+02, 2.550e+02], [1.380e+02, 8.260e+02]],
+                          [[-3.760e+02, -1.250e+02], [-3.880e+02, 5.550e+02], [-8.000e+01, 1.219e+03]],
+                          [[-4.140e+02, -5.800e+01], [-4.730e+02, 6.750e+02], [-1.550e+02, 1.303e+03]],
+                          [[-3.880e+02, -4.400e+01], [-5.110e+02, 5.540e+02], [-2.700e+02, 1.410e+03]],
+                          [[-3.410e+02, -4.600e+01], [-4.170e+02, 6.120e+02], [-2.030e+02, 1.342e+03]],
+                          [[1.500e+01, 6.200e+01], [-1.870e+02, 2.320e+02], [4.670e+02, 5.550e+02]],
+                          [[1.400e+02, 1.960e+02], [-2.020e+02, 2.290e+02], [3.940e+02, 5.970e+02]],
+                          [[9.900e+01, 3.760e+02], [-1.710e+02, 1.840e+02], [1.190e+02, 8.210e+02]],
+                          [[-4.200e+01, 4.370e+02], [-1.030e+02, 3.510e+02], [-1.050e+02, 1.177e+03]],
+                          [[-4.900e+01, 4.220e+02], [-2.030e+02, 4.260e+02], [-1.940e+02, 1.269e+03]],
+                          [[-4.400e+01, 3.680e+02], [-1.560e+02, 4.550e+02], [-3.080e+02, 1.375e+03]],
+                          [[-6.500e+01, 3.670e+02], [-1.640e+02, 5.040e+02], [-2.080e+02, 1.294e+03]],
+                          [[-1.010e+02, -8.900e+01], [-9.000e+00, 8.000e+00], [-4.000e+00, 4.000e+00]],
+                          [[-2.150e+02, -4.000e+01], [-1.080e+02, 4.050e+02], [-4.710e+02, -2.160e+02]],
+                          [[-2.660e+02, -9.000e+00], [-2.310e+02, 3.740e+02], [-9.190e+02, -4.280e+02]],
+                          [[-3.100e+02, -1.700e+01], [-1.060e+02, 5.520e+02], [-1.052e+03, -6.070e+02]],
+                          [[8.000e+01, 9.100e+01], [-7.000e+00, 8.000e+00], [-4.000e+00, 4.000e+00]],
+                          [[4.500e+01, 2.450e+02], [-1.020e+02, 4.220e+02], [-4.640e+02, -1.630e+02]],
+                          [[3.700e+01, 2.600e+02], [-2.260e+02, 3.760e+02], [-9.090e+02, -4.140e+02]],
+                          [[7.100e+01, 2.940e+02], [-1.090e+02, 5.350e+02], [-1.042e+03, -5.820e+02]],
+                          [[-2.500e+01, 3.600e+01], [-2.550e+02, 3.400e+02], [5.690e+02, 6.900e+02]],
+                          [[-2.900e+01, 5.300e+01], [-1.250e+02, 4.870e+02], [4.480e+02, 8.450e+02]],
+                          [[-5.300e+01, 1.900e+01], [-1.730e+02, 5.080e+02], [5.130e+02, 8.550e+02]],
+                          [[-1.130e+02, -5.100e+01], [-2.760e+02, 4.100e+02], [6.150e+02, 7.610e+02]],
+                          [[1.000e+00, 7.400e+01], [-1.680e+02, 5.050e+02], [5.090e+02, 8.530e+02]],
+                          [[5.200e+01, 1.300e+02], [-2.750e+02, 4.090e+02], [6.110e+02, 7.820e+02]]])
+
+
+def to_motionimg_bp_minmax(
+        seq,
+        output_size=(256, 256),
+        minmax_per_bp: np.ndarray = None,
+        show_img=False,
+) -> np.ndarray:
+    """ Returns a Motion Image, that represents this sequences' positions.
+
+            Creates an Image from 3-D position data of motion sequences.
+            Rows represent a body part (or some arbitrary position instance).
+            Columns represent a frame of the sequence.
+
+            Args:
+                output_size (int, int): The size of the output image in pixels
+                    (height, width). Default=(200,200)
+                minmax_per_bp (int, int): The minimum and maximum xyx-positions.
+                    Mapped to color range (0, 255) for each body part separately.
+        """
+    # Create Image container
+    img = np.zeros((len(seq.positions[0, :]), len(seq.positions), 3), dtype='uint8')
+    # 1. Map (min_pos, max_pos) range to (0, 255) Color range.
+    # 2. Swap Axes of and frames(0) body parts(1) so rows represent body
+    # parts and cols represent frames.
+    for i, bp in enumerate(seq.positions[0]):
+        bp_positions = seq.positions[:, i]
+        x_colors = np.interp(bp_positions[:, 0], [minmax_per_bp[i, 0, 0], minmax_per_bp[i, 0, 1]], [0, 255])
+        img[i, :, 0] = x_colors
+        img[i, :, 1] = np.interp(bp_positions[:, 1], [minmax_per_bp[i, 1, 0], minmax_per_bp[i, 1, 1]], [0, 255])
+        img[i, :, 2] = np.interp(bp_positions[:, 2], [minmax_per_bp[i, 2, 0], minmax_per_bp[i, 2, 1]], [0, 255])
+    img = cv2.resize(img, output_size)
+
+    if show_img:
+        cv2.imshow(seq.name, img)
+        print(f'Showing motion image from [{seq.name}]. Press any key to' ' close the image and continue.')
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    return img
 
 
 def _normalize_seq(seq):
@@ -39,7 +108,7 @@ class RepCounter:
         self.preprocess = preprocess
 
         self.seq_gt = _normalize_seq(seq_gt)
-        self.motion_image_gt = seq_gt.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
+        self.motion_image_gt = to_motionimg_bp_minmax(seq_gt, output_size=(256, 256), minmax_per_bp=minmax_per_bp)
         self.featvec_gt = featvec.load_from_motion_imgs(motion_images=[self.motion_image_gt],
                                                         model=self.model,
                                                         feature_size=self.feature_size,
@@ -66,16 +135,13 @@ class RepCounter:
         seq_split_original = self.seq_q_original[start:].split(overlap=0, subseq_size=self.subseq_len)
         seq_split_normalized = [_normalize_seq(seq) for seq in seq_split_original]
         self.seqs_q_normalized += seq_split_normalized
-        mi_split = [
-            seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
-            for seq in seq_split_normalized
-        ]
+        mi_split = [to_motionimg_bp_minmax(seq, output_size=(256, 256), minmax_per_bp=minmax_per_bp) for seq in seq_split_normalized]
         self.motion_images_q += seq_split_normalized
         featvec_split = featvec.load_from_motion_imgs(motion_images=mi_split, model=self.model, feature_size=self.feature_size, preprocess=self.preprocess)
         self.featvecs_q += featvec_split
         self.distances += [np.linalg.norm(self.featvec_gt - featvec_q) for featvec_q in featvec_split]
 
-        self.savgol_distances = savgol_filter(self.distances, self.savgol_win, 3, mode='nearest')
+        self.savgol_distances = savgol_filter(self.distances, self.savgol_win, 7, mode='nearest')
         self.savgol_distance_minima = argrelextrema(self.savgol_distances, np.less_equal, order=5)[0]
 
         # Keyframe indices per frame
