@@ -96,9 +96,9 @@ for filename in Path(src_root).rglob('*.json'):
     print(f'Loaded: {seq.name} [{seq.desc}]')
 
 # Filter Outliers and get xyz_minmax values
-iqr_factor_x = 1.0
-iqr_factor_y = 1.0
-iqr_factor_z = 1.0
+iqr_factor_x = 2.5
+iqr_factor_y = 2.5
+iqr_factor_z = 2.5
 
 minmax_xyz = xyz_minmax_coords_per_bodypart(seqs, [iqr_factor_x, iqr_factor_y, iqr_factor_z], plot_histogram=False)
 # print(f'minmax_xyz:\n{minmax_xyz}')

@@ -38,11 +38,14 @@ preprocess = transforms.Compose([
 
 # Root folder for Query Sequence files
 # OVERHEADPRESS
-# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-02-59-14'  # 18/20
-src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-03-00-12'  # 20/20
-# src_root = './data/sequences/mka-beware-1.1-sets/Dennis/overheadpress/19-08-2020-12-52-22'  # 20/20
+# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-02-59-14'
+# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-03-00-12'
+# src_root = './data/sequences/mka-beware-1.1-sets/Dennis/overheadpress/19-08-2020-12-52-22'
 # SQUAT
-# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-52-22'  # 20/20
+# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-07-41'
+# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-11-58-05'
+# src_root = './data/sequences/mka-beware-1.1-sets/Dennis/squat/19-08-2020-12-29-27'
+src_root = './data/sequences/mka-beware-1.1-sets/Dennis/squat/19-08-2020-12-33-50'
 
 seq_transforms = SequenceTransforms(SequenceTransforms.mka_to_iisy())
 seq_loader = SequenceLoaderMKA(seq_transforms)
@@ -73,9 +76,9 @@ def fill_queue(queue: Queue, batchsize: int = 10):
 
 
 # Load Ground Truth Sequence
-seq_name = 'overheadpress_225.json'
-seq_class = 'overheadpress'
-seq_gt = seq_loader.load(path=f'./data/sequences/mka-beware-1.1/overheadpress/{seq_name}', name=seq_name[:-5], desc=seq_class)
+seq_name = 'squat_225.json'
+seq_class = 'squat'
+seq_gt = seq_loader.load(path=f'./data/sequences/mka-beware-1.1/squat/{seq_name}', name=seq_name[:-5], desc=seq_class)
 repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=21, model=model, feature_size=feature_size, preprocess=preprocess)
 
 
@@ -105,7 +108,8 @@ def stream(batchsize, fps, delay):
             print(f'keyframes: {repcounter.keyframes}')
             print(f'Creating Animated Results Plot...')
             # repcounter.show_animated()
-            repcounter.show()
+            # repcounter.show()
+            repcounter.show_animated()
             click.pause()
             # refill queue and start again
             seq_q_queue = fill_queue(Queue(maxsize=0))
