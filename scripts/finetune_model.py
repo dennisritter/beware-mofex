@@ -81,4 +81,4 @@ trained_models_path = Path(f'./data/trained_models/{dataset_name}').resolve()
 model_saver.save_model(model, trained_models_path, model_name, dataset_name, num_epoch=num_epochs)
 # Plot the training curves of validation accuracy vs. number of epochs
 val_acc_history = [acc.cpu().numpy() for acc in val_acc_history]
-model_plotter.plot_val_acc_on_batch(val_acc_history, model_name, dataset_name, path=trained_models_path, num_pretrained_epochs=0, show=False, save=True)
+model_plotter.plot_val_acc_on_batch(val_acc_history, model_name, dataset_name, path=trained_models_path, num_pretrained_epochs=0, show=True, save=True)
