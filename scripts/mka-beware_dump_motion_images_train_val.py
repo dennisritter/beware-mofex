@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from mofex.preprocessing.helpers import xyz_minmax_coords, xyz_minmax_coords_per_bodypart
 from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 import mofex.preprocessing.normalizations as mofex_norm
+import random
 
 import mana.utils.math.normalizations as normalizations
 from mana.models.sequence import Sequence
@@ -86,6 +87,7 @@ for filename in Path(src_root).rglob('*.json'):
     seq.positions = mofex_norm.center_positions(seq.positions)
     seq.positions = normalizations.pose_position(seq.positions, seq.positions[:, CENTER_IDX, :])
     mofex_norm.orientation(seq.positions, seq.positions[0, LEFT_IDX, :], seq.positions[0, RIGHT_IDX, :], seq.positions[0, UP_IDX, :])
+
     # Add Sequences to class label in dictionary
     if seq.desc in seq_labeled_dict:
         seq_labeled_dict[seq.desc].append(seq)
@@ -95,6 +97,45 @@ for filename in Path(src_root).rglob('*.json'):
     seqs.append(seq)
     print(f'Loaded: {seq.name} [{seq.desc}]')
 
+# * Split sequences into chunks
+chunk_sizes = [4, 8, 16, 32, 64, 128]
+merge_sizes = np.arange(1, 5)
+seqs_chunked = []
+chunks_labeled_dict = {}
+for seq_class in seq_labeled_dict:
+    for i, seq in enumerate(seq_labeled_dict[seq_class]):
+        # Merge three sequences
+        chunk_size = random.choice(chunk_sizes)
+        # Only merge if not enough sequences in list
+        if chunk_size > len(seq):
+            chunk_size = len(seq)
+        seq_chunks = seq.split(overlap=0, subseq_size=chunk_size)
+
+        for j, seq_chunk in enumerate(seq_chunks):
+            seq_chunk.name = f'{seq_class}_{i}_n{chunk_size}_{j}'
+            seq_chunk.desc = f'{seq_class}'
+            seqs_chunked.append(seq_chunk)
+
+            if seq_chunk.desc in chunks_labeled_dict:
+                chunks_labeled_dict[seq_chunk.desc].append(seq_chunk)
+            else:
+                chunks_labeled_dict[seq_chunk.desc] = [seq_chunk]
+    idx = 0
+    while idx < len(seq_labeled_dict[seq_class]) - merge_sizes.max():
+        seq = seq_labeled_dict[seq_class][idx]
+        n_seqs_to_merge = random.choice(merge_sizes)
+        for i in range(1, n_seqs_to_merge):
+            seq.append(seq_labeled_dict[seq_class][idx + i])
+        seq.name = f'{seq_class}_{idx}_m{n_seqs_to_merge}'
+        seq.desc = f'{seq_class}'
+        if seq.desc in chunks_labeled_dict:
+            chunks_labeled_dict[seq.desc].append(seq)
+        else:
+            chunks_labeled_dict[seq.desc] = [seq]
+        idx += n_seqs_to_merge
+
+seqs = seqs_chunked
+seq_labeled_dict = chunks_labeled_dict
 # Filter Outliers and get xyz_minmax values
 iqr_factor_x = 2.5
 iqr_factor_y = 2.5

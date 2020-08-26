@@ -98,9 +98,9 @@ def xyz_minmax_coords_per_bodypart(seqs, iqr_factors_xyz, plot_histogram=False):
             y.sort()
             z.sort()
             # Filter outliers
-            x = filter_outliers_iqr(x, factor=iqr_factors_xyz[0])
-            y = filter_outliers_iqr(y, factor=iqr_factors_xyz[1])
-            z = filter_outliers_iqr(z, factor=iqr_factors_xyz[2])
+            # x = filter_outliers_iqr(x, factor=iqr_factors_xyz[0])
+            # y = filter_outliers_iqr(y, factor=iqr_factors_xyz[1])
+            # z = filter_outliers_iqr(z, factor=iqr_factors_xyz[2])
             xmin = math.floor(x.min())
             xmax = math.ceil(x.max())
             ymin = math.floor(y.min())
