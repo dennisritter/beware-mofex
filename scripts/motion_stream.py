@@ -111,8 +111,9 @@ def stream(batchsize, fps, delay):
             # repcounter.show()
             repcounter.show_animated()
             click.pause()
+            return  # end program
             # refill queue and start again
-            seq_q_queue = fill_queue(Queue(maxsize=0))
+            # seq_q_queue = fill_queue(Queue(maxsize=0))
 
         ### Do whatever you want to do here...
         repcounter.append_seq_q(seq_q_queue.get())

@@ -179,36 +179,39 @@ class RepCounter:
             ])
             frames.append(frame)
 
-        fig = go.Figure(data=[
-            go.Scatter(x=np.arange(len(self.history[0]["savgol_distances"])), y=self.history[0]["savgol_distances"]),
-            go.Scatter(x=self.history[0]["savgol_distance_minima"], y=self.history[0]["min_dists"], mode="markers"),
-            go.Scatter(x=np.arange(len(self.distances)), y=np.zeros(len(self.distances)), mode="markers")
-        ],
-                        layout=go.Layout(xaxis=dict(range=[0, len(self.savgol_distances)], autorange=False),
-                                         yaxis=dict(range=[0, max(self.savgol_distances)], autorange=False),
-                                         title="Animated RepCounter Results",
-                                         updatemenus=[
-                                             dict(type="buttons",
-                                                  buttons=[{
-                                                      "args": [
-                                                          None, {
-                                                              "frame": {
-                                                                  "duration": 100,
-                                                                  "redraw": False
-                                                              },
-                                                              "fromcurrent": True,
-                                                              "transition": {
-                                                                  "duration": 30,
-                                                                  "easing": "quadratic-in-out"
-                                                              }
-                                                          }
-                                                      ],
-                                                      "label":
-                                                      "Play",
-                                                      "method":
-                                                      "animate"
-                                                  }])
-                                         ]),
-                        frames=frames)
+        fig = go.Figure(
+            data=[
+                go.Scatter(x=np.arange(len(self.history[0]["savgol_distances"])), y=self.history[0]["savgol_distances"]),
+                go.Scatter(x=self.history[0]["savgol_distance_minima"], y=self.history[0]["min_dists"], mode="markers"),
+                go.Scatter(x=np.arange(len(self.distances)), y=np.zeros(len(self.distances)), mode="markers")
+            ],
+            layout=go.Layout(
+                xaxis=dict(range=[0, len(self.savgol_distances)], autorange=False),
+                yaxis=dict(range=[0, max(self.savgol_distances)], autorange=False),
+                title="Animated RepCounter Results",
+                updatemenus=[
+                    dict(
+                        type="buttons",
+                        buttons=[{
+                            "args": [
+                                None,
+                                {
+                                    "frame": {
+                                        "duration": (1000 / 30) * 10,  # (1s / fps) * batchsize
+                                        "redraw": False
+                                    },
+                                    "fromcurrent": True,
+                                    "transition": {
+                                        "easing": "quadratic-in-out"
+                                    }
+                                }
+                            ],
+                            "label":
+                            "Play",
+                            "method":
+                            "animate"
+                        }])
+                ]),
+            frames=frames)
 
         fig.show()
