@@ -2,7 +2,7 @@
 import numpy as np
 import plotly.graph_objects as go
 import chart_studio.plotly as py
-import mofex.preprocessing.transformations as transformations
+import mana.utils.math.transformations as transformations
 
 
 class SkeletonVisualizer:

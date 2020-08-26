@@ -3,6 +3,7 @@ import math
 import numpy as np
 from mofex.preprocessing.filters import filter_outliers_iqr
 import plotly.graph_objects as go
+import cv2
 
 
 # Ignore outer 1%
@@ -134,3 +135,42 @@ def xyz_minmax_coords_per_bodypart(seqs, iqr_factors_xyz, plot_histogram=False):
             fig.show()
 
     return minmax_per_bp
+
+
+def to_motionimg_bp_minmax(
+        seq,
+        output_size=(256, 256),
+        minmax_per_bp: np.ndarray = None,
+        show_img=False,
+) -> np.ndarray:
+    """ Returns a Motion Image, that represents this sequences' positions.
+
+            Creates an Image from 3-D position data of motion sequences.
+            Rows represent a body part (or some arbitrary position instance).
+            Columns represent a frame of the sequence.
+
+            Args:
+                output_size (int, int): The size of the output image in pixels
+                    (height, width). Default=(200,200)
+                minmax_per_bp (int, int): The minimum and maximum xyx-positions.
+                    Mapped to color range (0, 255) for each body part separately.
+        """
+    # Create Image container
+    img = np.zeros((len(seq.positions[0, :]), len(seq.positions), 3), dtype='uint8')
+    # 1. Map (min_pos, max_pos) range to (0, 255) Color range.
+    # 2. Swap Axes of and frames(0) body parts(1) so rows represent body
+    # parts and cols represent frames.
+    for i, bp in enumerate(seq.positions[0]):
+        bp_positions = seq.positions[:, i]
+        x_colors = np.interp(bp_positions[:, 0], [minmax_per_bp[i, 0, 0], minmax_per_bp[i, 0, 1]], [0, 255])
+        img[i, :, 0] = x_colors
+        img[i, :, 1] = np.interp(bp_positions[:, 1], [minmax_per_bp[i, 1, 0], minmax_per_bp[i, 1, 1]], [0, 255])
+        img[i, :, 2] = np.interp(bp_positions[:, 2], [minmax_per_bp[i, 2, 0], minmax_per_bp[i, 2, 1]], [0, 255])
+    img = cv2.resize(img, output_size)
+
+    if show_img:
+        cv2.imshow(seq.name, img)
+        print(f'Showing motion image from [{seq.name}]. Press any key to' ' close the image and continue.')
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    return img
