@@ -1,12 +1,12 @@
 import numpy as np
-import mofex.feature_vectors as featvec
 from scipy.signal import argrelextrema, savgol_filter
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
-import mofex.preprocessing.normalizations as mofex_norm
 import mana.utils.math.normalizations as normalizations
-from mofex.preprocessing.helpers import to_motionimg_bp_minmax
 from torchvision import transforms
+import mofex.preprocessing.normalizations as mofex_norm
+from mofex.preprocessing.helpers import to_motionimg_bp_minmax
+import mofex.feature_vectors as featvec
 import mofex.model_loader as model_loader
 
 # * Must work for all tracking formats. Add params or find better solution
