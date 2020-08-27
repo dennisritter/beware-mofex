@@ -36,7 +36,7 @@ preprocess = transforms.Compose([
 ### TIPTOESTAND Christopher
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/tiptoestand'
 ### OVERHEADPRESS Philippe
-src_root = './data/sequences/mka-beware-1.1-sets/Philippe/overheadpress'
+# src_root = './data/sequences/mka-beware-1.1-sets/Philippe/overheadpress'
 ### OVERHEADPRESS Christopher
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-02-59-14'
@@ -51,7 +51,7 @@ src_root = './data/sequences/mka-beware-1.1-sets/Philippe/overheadpress'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/overheadpress/19-08-2020-02-59-14'
 ### SQUAT Christopher
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat'
-# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-10-48'
+src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-10-48'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-09-43'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-08-41'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-07-41'
@@ -61,8 +61,8 @@ src_root = './data/sequences/mka-beware-1.1-sets/Philippe/overheadpress'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-01-33'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-11-59-52'
 # src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-11-58-05'
-ground_truth = 'overheadpress_225.json'
-exercise = 'overheadpress'
+ground_truth = 'squat_225.json'
+exercise = 'squat'
 
 seq_transforms = SequenceTransforms(SequenceTransforms.mka_to_iisy())
 seq_loader = SequenceLoaderMKA(seq_transforms)
@@ -96,7 +96,7 @@ def fill_queue(queue: Queue, batchsize: int = 10):
 seq_name = ground_truth
 seq_class = exercise
 seq_gt = seq_loader.load(path=f'./data/sequences/mka-beware-1.1/{seq_class}/{seq_name}', name=seq_name[:-5], desc=seq_class)
-repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=21, model=model, feature_size=feature_size, preprocess=preprocess)
+repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=31, model=model, feature_size=feature_size, preprocess=preprocess)
 
 
 @click.command()

@@ -112,7 +112,7 @@ class SkeletonVisualizer:
                 "label": "Play",
                 "args": [None, {
                     "frame": {
-                        "duration": 0,
+                        "duration": (1000 / 30) * 1,  # (1s / fps) * batchsize,
                         "redraw": True
                     },
                     "fromcurrent": True,

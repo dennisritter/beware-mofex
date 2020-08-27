@@ -103,14 +103,14 @@ for filename in Path(src_root).rglob('*.json'):
     print(f'{seq.name}: frames = {len(seq)} ')
     seqs.append(seq)
 # Append Sequences to one set (one sequence)
-for seq in seqs[1:1]:
+for seq in seqs[1:2]:
     seqs[0].append(seq)
 seq_q = seqs[0]
 print(f'Created query sequence of {len(seq_q)} frames.')
 
 # subseq_len_list = [2, 4, 8, 16, 32]
 subseq_len_list = [4]
-savgol_windows = [11, 21, 31, 41, 51]
+savgol_windows = [31]
 savgol_order = 7
 
 fig_dist = make_subplots(rows=len(subseq_len_list), cols=1)
@@ -191,5 +191,5 @@ fig_dist.update_layout(height=500 * len(subseq_len_list),
                        width=1000,
                        title_text="Distances between first n frames of seq_gt and all segments of seq_q for different subseq length.")
 fig_dist.show()
-fig_savgol.update_layout(height=300 * len(savgol_windows), width=1000, title_text="Savgol Smoothed distances and key markings. (3 Squat Repetition Sequence)")
+fig_savgol.update_layout(height=300 * len(savgol_windows), width=1000, title_text="Savgol Smoothed distances and key markings.")
 fig_savgol.show()
