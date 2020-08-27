@@ -4,9 +4,12 @@ from scipy.signal import argrelextrema, savgol_filter
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import mofex.preprocessing.normalizations as mofex_norm
-from mofex.preprocessing.helpers import to_motionimg_bp_minmax
 import mana.utils.math.normalizations as normalizations
+from mofex.preprocessing.helpers import to_motionimg_bp_minmax
+from torchvision import transforms
+import mofex.model_loader as model_loader
 
+# * Must work for all tracking formats. Add params or find better solution
 # Indices constants for body parts that define normalized orientation of the skeleton
 # center -> pelvis
 CENTER_IDX = 0
@@ -19,7 +22,6 @@ UP_IDX = 1
 
 # Min/Max values used for the color mapping when transforming sequences to motion images
 # min values are mapped to RGB(0,0,0), max values to RGB(255,255,255)
-# * Determined from MKA-BEWARE-1.1 sequences.
 minmax_per_bp = np.array([[[-1.000e+00, 1.000e+00], [-1.000e+00, 1.000e+00], [-1.000e+00, 1.000e+00]],
                           [[-3.100e+01, 3.300e+01], [-4.000e+01, 1.150e+02], [1.340e+02, 2.100e+02]],
                           [[-4.500e+01, 4.300e+01], [-8.500e+01, 2.300e+02], [2.150e+02, 3.770e+02]],
@@ -63,57 +65,82 @@ def _normalize_seq(seq):
 
 class RepCounter:
     """Counts Repititions of motions from 3-D MoCap Sequences"""
-    def __init__(self, seq_gt, subseq_len, savgol_win, model, feature_size, preprocess):
-        self.model = model
-        self.feature_size = feature_size
-        self.preprocess = preprocess
+    def __init__(self, seq_gt, subseq_len):
+        # The Model that creates features from motion images
+        self.model = model_loader.load_trained_model(model_name='resnet101_mka-beware-1.1',
+                                                     remove_last_layer=True,
+                                                     state_dict_path='./data/trained_models/mka-beware-1.1/resnet101_mka-beware-1.1_e5.pt')
+        # Size of the features created by the model
+        self.featvec_size = 2048
+        # Transforms that are applied to motion images before send to model
+        self.preprocess = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        self.savgol_win = 31
+        self.savgol_order = 7
 
+        # The Ground Truth sequence that defines the start/end of the motion to count
         self.seq_gt = _normalize_seq(seq_gt)
+        # The motion image of the Ground Truth sequence
         self.motion_image_gt = to_motionimg_bp_minmax(seq_gt, output_size=(256, 256), minmax_per_bp=minmax_per_bp)
+        # The Ground Truths' feature vector determined from its motion image
         self.featvec_gt = featvec.load_from_motion_imgs(motion_images=[self.motion_image_gt],
                                                         model=self.model,
                                                         feature_size=self.feature_size,
                                                         preprocess=self.preprocess)[0]
+
         self.seq_q_original = None
         self.seqs_q_normalized = []
         self.motion_images_q = []
         self.featvecs_q = []
         self.subseq_len = subseq_len
-        self.savgol_win = savgol_win
         self.distances = []
         self.keyframes = []
         self.history = []
 
     def append_seq_q(self, seq):
-        # Add new seq to original sequence
+        # Append the given sequence to the unnormalized query sequence
         if not self.seq_q_original:
             self.seq_q_original = seq
         else:
             self.seq_q_original.append(seq)
 
-        # Postprocessing for unprocessed sequence frames
-        start = len(self.seqs_q_normalized) * self.subseq_len
-        seq_split_original = self.seq_q_original[start:].split(overlap=0, subseq_size=self.subseq_len)
+        ## Processing of new positions
+        # Determine the frame in the unnormalized query sequence from where no postprocessing has been done yet
+        unprocessed_start = len(self.seqs_q_normalized) * self.subseq_len
+        # Split unprocessed frames into several smaller sequences
+        seq_split_original = self.seq_q_original[unprocessed_start:].split(overlap=0, subseq_size=self.subseq_len)
+        # Normalize the split sequences
         seq_split_normalized = [_normalize_seq(seq) for seq in seq_split_original]
         self.seqs_q_normalized += seq_split_normalized
+        # Create motion images from the new split sequences
         mi_split = [to_motionimg_bp_minmax(seq, output_size=(256, 256), minmax_per_bp=minmax_per_bp) for seq in seq_split_normalized]
         self.motion_images_q += seq_split_normalized
+        # Create feature vectors from the new motion images
         featvec_split = featvec.load_from_motion_imgs(motion_images=mi_split, model=self.model, feature_size=self.feature_size, preprocess=self.preprocess)
         self.featvecs_q += featvec_split
+        # Determine the distances of the ground truth sequence and each of the new split feature vectors
         self.distances += [np.linalg.norm(self.featvec_gt - featvec_q) for featvec_q in featvec_split]
 
-        self.savgol_distances = savgol_filter(self.distances, self.savgol_win, 7, mode='nearest')
+        ## Counting
+        # Smoothen the list of all distances
+        self.savgol_distances = savgol_filter(self.distances, self.savgol_win, self.savgol_order, mode='nearest')
+        # Find the chunks that are most similar to the ground truth sequence
+        # by identifying local minima in the smoothened distances
         self.savgol_distance_minima = argrelextrema(self.savgol_distances, np.less_equal, order=5)[0]
-
-        # Keyframe indices per frame
+        # Determine the start/end keyframe positions
         self.keyframes = self.savgol_distance_minima * self.subseq_len
 
-        min_dists = [self.savgol_distances[idx] for idx in self.savgol_distance_minima]
+        # Add some data to a history
         self.history.append({
             "distances": self.distances[:],
             "savgol_distances": self.savgol_distances[:],
             "savgol_distance_minima": self.savgol_distance_minima[:],
-            "min_dists": min_dists[:]
+            "min_dists": [self.savgol_distances[idx] for idx in self.savgol_distance_minima]
         })
 
     def show(self):
