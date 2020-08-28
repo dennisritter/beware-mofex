@@ -3,6 +3,7 @@ import click
 from torchvision import transforms
 import mofex.model_loader as model_loader
 from mofex.rep_counter import RepCounter
+from mofex.solver.mka_beware_rep_counter import RepCounter as MKARepCounter
 from pathlib import Path
 
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
@@ -96,7 +97,8 @@ def fill_queue(queue: Queue, batchsize: int = 10):
 seq_name = ground_truth
 seq_class = exercise
 seq_gt = seq_loader.load(path=f'./data/sequences/mka-beware-1.1/{seq_class}/{seq_name}', name=seq_name[:-5], desc=seq_class)
-repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=31, model=model, feature_size=feature_size, preprocess=preprocess)
+# repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=31, model=model, feature_size=feature_size, preprocess=preprocess)
+repcounter = MKARepCounter(seq_gt=seq_gt[0:4], subseq_len=4)
 
 
 @click.command()
@@ -124,8 +126,8 @@ def stream(batchsize, fps, delay):
             print(f'Repititions: {len(repcounter.keyframes)-1}')
             print(f'keyframes: {repcounter.keyframes}')
             print(f'Creating Animated Results Plot...')
-            # repcounter.show_animated()
-            repcounter.show()
+            # repcounter.show()
+            repcounter.show_animated()
             # click.pause()
             return  # end program
             # refill queue and start again

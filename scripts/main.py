@@ -5,9 +5,11 @@ import mofex.preprocessing.normalizations as mofex_norm
 import mana.utils.math.normalizations as normalizations
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
 from mana.models.sequence_transforms import SequenceTransforms
+from mofex.solver.mka_beware_rep_counter import RepCounter
 
 # src_root = './data/sequences/mka-beware-1.1/'
 src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-10-48'
+# src_root = './data/sequences/test'
 
 dump_root = 'data/motion_images'
 dataset_name = 'mka-beware-1.1'
@@ -48,6 +50,9 @@ for seq in seqs[1:]:
     seqs[0].append(seq)
 seq_q = seqs[0]
 
+sv = SkeletonVisualizer(_normalize_seq(seq_q))
+sv.show(auto_open=True)
+
 # sv = SkeletonVisualizer(_normalize_seq(seq_q[12:72]))
 # sv = SkeletonVisualizer(_normalize_seq(seq_q[72:128]))
 # sv = SkeletonVisualizer(_normalize_seq(seq_q[128:184]))
@@ -70,9 +75,8 @@ seq_q = seqs[0]
 # sv = SkeletonVisualizer(_normalize_seq(seq_q[916:976]))
 # sv = SkeletonVisualizer(_normalize_seq(seq_q[976:1036]))
 # sv = SkeletonVisualizer(_normalize_seq(seq_q[1036:1092]))
-sv = SkeletonVisualizer(_normalize_seq(seq_q[1092:]))
-
-sv.show(auto_open=True)
+# sv = SkeletonVisualizer(_normalize_seq(seq_q[1092:]))
+# sv.show(auto_open=True)
 
 # for filename in Path(src_root).rglob('squat_255.json'):
 #     # print(str(filename).replace('\\', '/').split('/'))

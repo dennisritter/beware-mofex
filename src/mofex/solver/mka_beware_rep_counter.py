@@ -71,7 +71,7 @@ class RepCounter:
                                                      remove_last_layer=True,
                                                      state_dict_path='./data/trained_models/mka-beware-1.1/resnet101_mka-beware-1.1_e5.pt')
         # Size of the features created by the model
-        self.featvec_size = 2048
+        self.feature_size = 2048
         # Transforms that are applied to motion images before send to model
         self.preprocess = transforms.Compose([
             transforms.ToPILImage(),
@@ -112,19 +112,21 @@ class RepCounter:
         ## Processing of new positions
         # Determine the frame in the unnormalized query sequence from where no postprocessing has been done yet
         unprocessed_start = len(self.seqs_q_normalized) * self.subseq_len
-        # Split unprocessed frames into several smaller sequences
-        seq_split_original = self.seq_q_original[unprocessed_start:].split(overlap=0, subseq_size=self.subseq_len)
-        # Normalize the split sequences
-        seq_split_normalized = [_normalize_seq(seq) for seq in seq_split_original]
-        self.seqs_q_normalized += seq_split_normalized
-        # Create motion images from the new split sequences
-        mi_split = [to_motionimg_bp_minmax(seq, output_size=(256, 256), minmax_per_bp=minmax_per_bp) for seq in seq_split_normalized]
-        self.motion_images_q += seq_split_normalized
-        # Create feature vectors from the new motion images
-        featvec_split = featvec.load_from_motion_imgs(motion_images=mi_split, model=self.model, feature_size=self.feature_size, preprocess=self.preprocess)
-        self.featvecs_q += featvec_split
-        # Determine the distances of the ground truth sequence and each of the new split feature vectors
-        self.distances += [np.linalg.norm(self.featvec_gt - featvec_q) for featvec_q in featvec_split]
+        # Check whether enough new frames have been appended for further processing
+        if len(self.seq_q_original[unprocessed_start:]) >= self.subseq_len:
+            # Split unprocessed frames into several smaller sequences
+            seq_split_original = self.seq_q_original[unprocessed_start:].split(overlap=0, subseq_size=self.subseq_len)
+            # Normalize the split sequences
+            seq_split_normalized = [_normalize_seq(seq) for seq in seq_split_original]
+            self.seqs_q_normalized += seq_split_normalized
+            # Create motion images from the new split sequences
+            mi_split = [to_motionimg_bp_minmax(seq, output_size=(256, 256), minmax_per_bp=minmax_per_bp) for seq in seq_split_normalized]
+            self.motion_images_q += seq_split_normalized
+            # Create feature vectors from the new motion images
+            featvec_split = featvec.load_from_motion_imgs(motion_images=mi_split, model=self.model, feature_size=self.feature_size, preprocess=self.preprocess)
+            self.featvecs_q += featvec_split
+            # Determine the distances of the ground truth sequence and each of the new split feature vectors
+            self.distances += [np.linalg.norm(self.featvec_gt - featvec_q) for featvec_q in featvec_split]
 
         ## Counting
         # Smoothen the list of all distances
@@ -162,21 +164,30 @@ class RepCounter:
         frames = []
         for snapshot in self.history:
             frame = go.Frame(data=[
-                go.Scatter(x=np.arange(len(snapshot["savgol_distances"])), y=snapshot["savgol_distances"]),
-                go.Scatter(x=snapshot["savgol_distance_minima"], y=snapshot["min_dists"])
+                go.Scatter(x=np.arange(len(snapshot["savgol_distances"])) * self.subseq_len, y=snapshot["savgol_distances"]),
+                go.Scatter(
+                    x=snapshot["savgol_distance_minima"] * self.subseq_len,
+                    y=snapshot["min_dists"],
+                    text=snapshot["savgol_distance_minima"] * self.subseq_len,
+                    textposition="bottom center",
+                    mode="markers+text",
+                    marker=dict(size=20),
+                )
             ])
             frames.append(frame)
 
         fig = go.Figure(
             data=[
-                go.Scatter(x=np.arange(len(self.history[0]["savgol_distances"])), y=self.history[0]["savgol_distances"]),
-                go.Scatter(x=self.history[0]["savgol_distance_minima"], y=self.history[0]["min_dists"], mode="markers"),
-                go.Scatter(x=np.arange(len(self.distances)), y=np.zeros(len(self.distances)), mode="markers")
+                go.Scatter(x=[0], y=[0], name="Smoothed Distances"),
+                go.Scatter(x=[0], y=[0], name="Start/End Keyframes"),
             ],
             layout=go.Layout(
-                xaxis=dict(range=[0, len(self.savgol_distances)], autorange=False),
-                yaxis=dict(range=[0, max(self.savgol_distances)], autorange=False),
+                xaxis=dict(range=[0, len(self.savgol_distances) * self.subseq_len], autorange=False),
+                yaxis=dict(range=[min(self.savgol_distances) - 1, max(self.savgol_distances)], autorange=False),
                 title="Animated RepCounter Results",
+                xaxis_title='Frame',
+                yaxis_title='Distances',
+                font=dict(size=18),
                 updatemenus=[
                     dict(
                         type="buttons",
