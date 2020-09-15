@@ -63,7 +63,7 @@ def _normalize_seq(seq):
 
 class RepCounter:
     """Counts Repititions of motions from 3-D MoCap Sequences"""
-    def __init__(self, seq_gt, subseq_len, savgol_win, model, feature_size, preprocess):
+    def __init__(self, seq_gt, subseq_len, savgol_win, model, feature_size, preprocess, max_frames):
         self.model = model
         self.feature_size = feature_size
         self.preprocess = preprocess
@@ -79,6 +79,7 @@ class RepCounter:
         self.motion_images_q = []
         self.featvecs_q = []
         self.subseq_len = subseq_len
+        self.max_frames = max_frames
         self.savgol_win = savgol_win
         self.distances = []
         self.keyframes = []
@@ -88,12 +89,16 @@ class RepCounter:
         # Add new seq to original sequence
         if not self.seq_q_original:
             self.seq_q_original = seq
+        # If seq is too long, cut off the first N frames
+        elif len(self.seq_q_original) > self.max_frames and self.max_frames != 0:
+            self._crop_seq()
         else:
             self.seq_q_original.append(seq)
 
         # Postprocessing for unprocessed sequence frames
         start = len(self.seqs_q_normalized) * self.subseq_len
         seq_split_original = self.seq_q_original[start:].split(overlap=0, subseq_size=self.subseq_len)
+
         seq_split_normalized = [_normalize_seq(seq) for seq in seq_split_original]
         self.seqs_q_normalized += seq_split_normalized
         mi_split = [to_motionimg_bp_minmax(seq, output_size=(256, 256), minmax_per_bp=minmax_per_bp) for seq in seq_split_normalized]
@@ -115,6 +120,18 @@ class RepCounter:
             "savgol_distance_minima": self.savgol_distance_minima[:],
             "min_dists": min_dists[:]
         })
+
+    def _crop_seq(self):
+        n_chunks = int(self.max_frames / self.subseq_len)
+        n_frames = n_chunks * self.subseq_len
+        self.seq_q_original = self.seq_q_original[len(self.seq_q_original) - n_frames:]
+        self.seqs_q_normalized = self.seqs_q_normalized[len(self.seqs_q_normalized) - n_chunks:]
+        self.motion_images_q = self.motion_images_q[len(self.motion_images_q) - n_chunks:]
+        self.featvecs_q = self.featvecs_q[len(self.featvecs_q) - n_chunks:]
+        self.distances = self.distances[len(self.distances) - n_chunks:]
+        self.savgol_distances = []
+        self.savgol_distance_minima = []
+        self.keyframes = []
 
     def show(self):
         fig = make_subplots(rows=3, cols=1)

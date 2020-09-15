@@ -98,7 +98,7 @@ seq_name = ground_truth
 seq_class = exercise
 seq_gt = seq_loader.load(path=f'./data/sequences/mka-beware-1.1/{seq_class}/{seq_name}', name=seq_name[:-5], desc=seq_class)
 # repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=31, model=model, feature_size=feature_size, preprocess=preprocess)
-repcounter = MKARepCounter(seq_gt=seq_gt[0:4], subseq_len=4)
+repcounter = MKARepCounter(seq_gt=seq_gt[0:4], subseq_len=4, max_frames=500)
 
 
 @click.command()
