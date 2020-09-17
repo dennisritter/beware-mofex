@@ -3,7 +3,7 @@ import click
 from torchvision import transforms
 import mofex.model_loader as model_loader
 from mofex.rep_counter import RepCounter
-from mofex.solver.mka_beware_rep_counter import RepCounter as MKARepCounter
+from mofex.solver.beware_rep_counter import RepCounter as MKARepCounter
 from pathlib import Path
 
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
@@ -98,7 +98,7 @@ seq_name = ground_truth
 seq_class = exercise
 seq_gt = seq_loader.load(path=f'./data/sequences/mka-beware-1.1/{seq_class}/{seq_name}', name=seq_name[:-5], desc=seq_class)
 # repcounter = RepCounter(seq_gt=seq_gt[0:4], subseq_len=4, savgol_win=31, model=model, feature_size=feature_size, preprocess=preprocess)
-repcounter = MKARepCounter(seq_gt=seq_gt[0:4], subseq_len=4, max_frames=500)
+repcounter = MKARepCounter(seq_gt=seq_gt[0:4], subseq_len=4)
 
 
 @click.command()
@@ -113,6 +113,8 @@ def stream(batchsize, fps, delay):
     seq_q_queue = fill_queue(seq_q_queue, batchsize)
 
     show_counter = 0
+    # TODO: Remove
+    reps = []
     while True:
         # time.sleep((batchsize / fps) + delay)
         t += batchsize / fps
@@ -125,16 +127,21 @@ def stream(batchsize, fps, delay):
             print(f'RESULTS')
             print(f'Repititions: {len(repcounter.keyframes)-1}')
             print(f'keyframes: {repcounter.keyframes}')
-            print(f'Creating Animated Results Plot...')
+            # print(f'Creating Animated Results Plot...')
             # repcounter.show()
-            repcounter.show_animated()
+            # repcounter.show_animated()
             # click.pause()
+            print(len(reps))
+            print([rep.shape for rep in reps])
             return  # end program
             # refill queue and start again
             # seq_q_queue = fill_queue(Queue(maxsize=0))
 
         ### Do whatever you want to do here...
         repcounter.append_seq_q(seq_q_queue.get())
+        reps += repcounter.get_repetition_sequences(remove=True, normalized=True)
+        print(repcounter.keyframes)
+        print([rep.positions.shape for rep in reps])
         show_counter += batchsize
         # if show_counter >= 300:
         #     show_counter = 0

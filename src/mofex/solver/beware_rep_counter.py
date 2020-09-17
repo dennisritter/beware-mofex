@@ -9,6 +9,7 @@ from mofex.preprocessing.helpers import to_motionimg_bp_minmax
 import mofex.feature_vectors as featvec
 import mofex.model_loader as model_loader
 
+# TODO: IISY Indices und minmax and IISY indices anpassen
 # * Must work for all tracking formats. Add params or find better solution
 # Indices constants for body parts that define normalized orientation of the skeleton
 # center -> pelvis
@@ -65,7 +66,7 @@ def _normalize_seq(seq):
 
 class RepCounter:
     """Counts Repititions of motions from 3-D MoCap Sequences"""
-    def __init__(self, seq_gt, subseq_len, max_frames):
+    def __init__(self, seq_gt, subseq_len):
         # The Model that creates features from motion images
         self.model = model_loader.load_trained_model(model_name='resnet101_mka-beware-1.1',
                                                      remove_last_layer=True,
@@ -93,25 +94,23 @@ class RepCounter:
                                                         feature_size=self.feature_size,
                                                         preprocess=self.preprocess)[0]
 
+        self.subseq_len = subseq_len
         self.seq_q_original = None
         self.seqs_q_normalized = []
         self.motion_images_q = []
         self.featvecs_q = []
-        self.subseq_len = subseq_len
-        self.max_frames = max_frames
         self.distances = []
         self.keyframes = []
+        self.seq_repetitions = []
         self.history = []
 
     def append_seq_q(self, seq):
         # Append the given sequence to the unnormalized query sequence
         if not self.seq_q_original:
             self.seq_q_original = seq
-        # If seq is too long, cut off the first N frames
-        elif len(self.seq_q_original) > self.max_frames and self.max_frames != 0:
-            self._crop_seq()
         else:
             self.seq_q_original.append(seq)
+            # self.n_seq_q_total_frames += len(seq)
 
         ## Processing of new positions
         # Determine the frame in the unnormalized query sequence from where no postprocessing has been done yet
@@ -140,8 +139,12 @@ class RepCounter:
         self.savgol_distance_minima = argrelextrema(self.savgol_distances, np.less_equal, order=5)[0]
         # Determine the start/end keyframe positions
         self.keyframes = self.savgol_distance_minima * self.subseq_len
+        # Store single repetition sequences in list
+        if len(self.keyframes) >= 2:
+            self.seq_repetitions = [self.seq_q_original[self.keyframes[i]:self.keyframes[i + 1]] for i, _ in enumerate(self.keyframes[:-1])]
+        # print(len(self.seq_repetitions))
+        # print([rep.positions.shape for rep in self.seq_repetitions])
 
-        # Add some data to a history
         self.history.append({
             "distances": self.distances[:],
             "savgol_distances": self.savgol_distances[:],
@@ -149,17 +152,32 @@ class RepCounter:
             "min_dists": [self.savgol_distances[idx] for idx in self.savgol_distance_minima]
         })
 
-    def _crop_seq(self):
-        n_chunks = int(self.max_frames / self.subseq_len)
-        n_frames = n_chunks * self.subseq_len
-        self.seq_q_original = self.seq_q_original[len(self.seq_q_original) - n_frames:]
-        self.seqs_q_normalized = self.seqs_q_normalized[len(self.seqs_q_normalized) - n_chunks:]
-        self.motion_images_q = self.motion_images_q[len(self.motion_images_q) - n_chunks:]
-        self.featvecs_q = self.featvecs_q[len(self.featvecs_q) - n_chunks:]
-        self.distances = self.distances[len(self.distances) - n_chunks:]
-        self.savgol_distances = []
-        self.savgol_distance_minima = []
+    def get_repetition_sequences(self, remove: bool = True, normalized: bool = True):
+        if len(self.seq_repetitions) == 0:
+            return []
+        seq_repetitions = self.seq_repetitions
+        if normalized:
+            self.seq_repetitions = [_normalize_seq(seq) for seq in self.seq_repetitions]
+        if remove:
+            last_keyframe = self.keyframes[-1]
+            last_keyframe_chunk = int(last_keyframe / self.subseq_len)
+            self.seq_q_original = self.seq_q_original[:last_keyframe]
+            self.seqs_q_normalized = self.seqs_q_normalized[:last_keyframe_chunk]
+            self.motion_images_q = self.motion_images_q[:last_keyframe_chunk]
+            self.featvecs_q = self.motion_images_q[:last_keyframe_chunk]
+            self.distances = self.motion_images_q[:last_keyframe_chunk]
+            self.keyframes = []
+            self.seq_repetitions = []
+        return seq_repetitions
+
+    def reset(self):
+        self.seq_q_original = None
+        self.seqs_q_normalized = []
+        self.motion_images_q = []
+        self.featvecs_q = []
+        self.distances = []
         self.keyframes = []
+        self.seq_repetitions = []
 
     def show(self):
         fig = make_subplots(rows=3, cols=1)
