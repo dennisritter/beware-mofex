@@ -130,9 +130,8 @@ def stream(batchsize, fps, delay):
             # repcounter.show_animated()
             # click.pause()
 
-            for rep in reps:
-                sv = SkeletonVisualizer(rep)
-                sv.show()
+            sv = SkeletonVisualizer(reps[0][0])
+            sv.show()
             return  # end program
             # refill queue and start again
             # seq_q_queue = fill_queue(Queue(maxsize=0))
@@ -140,8 +139,10 @@ def stream(batchsize, fps, delay):
         ### Do whatever you want to do here...
         repcounter.append_seq_q(seq_q_queue.get())
         print(repcounter.keyframes)
-        reps += repcounter.get_repetition_sequences(remove=True, normalized=True)
-        print([rep.positions.shape for rep in reps])
+        rep = repcounter.get_repetitions(remove=True, normalized=True)
+        print(rep)
+        reps += rep
+        # print([rep for rep in reps])
         show_counter += batchsize
         # if show_counter >= 300:
         #     show_counter = 0

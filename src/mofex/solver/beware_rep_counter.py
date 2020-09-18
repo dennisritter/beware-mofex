@@ -100,7 +100,7 @@ class RepCounter:
         self.featvecs_q = []
         self.distances = []
         self.keyframes = []
-        self.seq_repetitions = []
+        self.repetitions = []
         self.history = []
 
     def append_seq_q(self, seq):
@@ -141,9 +141,11 @@ class RepCounter:
         # Store single repetition sequences in list
 
         if len(self.keyframes) >= 2:
-            self.seq_repetitions = [self.seq_q_original[self.keyframes[i]:self.keyframes[i + 1]] for i, _ in enumerate(self.keyframes[:-1])]
-        # print(len(self.seq_repetitions))
-        # print([rep.positions.shape for rep in self.seq_repetitions])
+            self.repetitions = [(self.seq_q_original[self.keyframes[i]:self.keyframes[i + 1]],
+                                 self.savgol_distances[int(self.keyframes[i] / self.subseq_len):int(self.keyframes[i + 1] / self.subseq_len)])
+                                for i, _ in enumerate(self.keyframes[:-1])]
+        # print(len(self.repetitions))
+        # print([rep.positions.shape for rep in self.repetitions])
 
         self.history.append({
             "distances": self.distances[:],
@@ -152,13 +154,15 @@ class RepCounter:
             "min_dists": [self.savgol_distances[idx] for idx in self.savgol_distance_minima]
         })
 
-    def get_repetition_sequences(self, remove: bool = True, normalized: bool = True):
-        if len(self.seq_repetitions) == 0:
+    def get_repetitions(self, remove: bool = True, normalized: bool = True):
+        """ Returns identified repititions in the current query sequence as a tuple of a sequence object and savgol distances (seq, savgol_dist)
+        """
+        if len(self.repetitions) == 0:
             return []
-        seq_repetitions = self.seq_repetitions
+        repetitions = self.repetitions
         if normalized:
             # Normalize sequences
-            self.seq_repetitions = [_normalize_seq(seq) for seq in self.seq_repetitions]
+            self.repetitions = [(_normalize_seq(rep[0]), rep[1]) for rep in self.repetitions]
         if remove:
             # Remove data of repetitions that have been retrieved already
             last_keyframe = self.keyframes[-1]
@@ -169,8 +173,8 @@ class RepCounter:
             self.featvecs_q = self.featvecs_q[last_keyframe_chunk:]
             self.distances = self.distances[last_keyframe_chunk:]
             self.keyframes = []
-            self.seq_repetitions = []
-        return seq_repetitions
+            self.repetitions = []
+        return repetitions
 
     def reset(self):
         # Reset repcounter data
@@ -180,7 +184,7 @@ class RepCounter:
         self.featvecs_q = []
         self.distances = []
         self.keyframes = []
-        self.seq_repetitions = []
+        self.repetitions = []
 
     def show(self):
         fig = make_subplots(rows=3, cols=1)
