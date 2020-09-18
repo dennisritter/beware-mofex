@@ -5,6 +5,7 @@ import mofex.model_loader as model_loader
 from mofex.rep_counter import RepCounter
 from mofex.solver.beware_rep_counter import RepCounter as MKARepCounter
 from pathlib import Path
+from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
 
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
 from mana.models.sequence_transforms import SequenceTransforms
@@ -124,23 +125,22 @@ def stream(batchsize, fps, delay):
         if seq_q_queue.empty():
             print(f'Stream stopped.')
             print(f'----------')
-            print(f'RESULTS')
-            print(f'Repititions: {len(repcounter.keyframes)-1}')
-            print(f'keyframes: {repcounter.keyframes}')
             # print(f'Creating Animated Results Plot...')
             # repcounter.show()
             # repcounter.show_animated()
             # click.pause()
-            print(len(reps))
-            print([rep.shape for rep in reps])
+
+            for rep in reps:
+                sv = SkeletonVisualizer(rep)
+                sv.show()
             return  # end program
             # refill queue and start again
             # seq_q_queue = fill_queue(Queue(maxsize=0))
 
         ### Do whatever you want to do here...
         repcounter.append_seq_q(seq_q_queue.get())
-        reps += repcounter.get_repetition_sequences(remove=True, normalized=True)
         print(repcounter.keyframes)
+        reps += repcounter.get_repetition_sequences(remove=True, normalized=True)
         print([rep.positions.shape for rep in reps])
         show_counter += batchsize
         # if show_counter >= 300:

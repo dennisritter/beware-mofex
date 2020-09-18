@@ -140,6 +140,7 @@ class RepCounter:
         # Determine the start/end keyframe positions
         self.keyframes = self.savgol_distance_minima * self.subseq_len
         # Store single repetition sequences in list
+
         if len(self.keyframes) >= 2:
             self.seq_repetitions = [self.seq_q_original[self.keyframes[i]:self.keyframes[i + 1]] for i, _ in enumerate(self.keyframes[:-1])]
         # print(len(self.seq_repetitions))
@@ -157,20 +158,23 @@ class RepCounter:
             return []
         seq_repetitions = self.seq_repetitions
         if normalized:
+            # Normalize sequences
             self.seq_repetitions = [_normalize_seq(seq) for seq in self.seq_repetitions]
         if remove:
+            # Remove data of repetitions that have been retrieved already
             last_keyframe = self.keyframes[-1]
             last_keyframe_chunk = int(last_keyframe / self.subseq_len)
-            self.seq_q_original = self.seq_q_original[:last_keyframe]
-            self.seqs_q_normalized = self.seqs_q_normalized[:last_keyframe_chunk]
-            self.motion_images_q = self.motion_images_q[:last_keyframe_chunk]
-            self.featvecs_q = self.motion_images_q[:last_keyframe_chunk]
-            self.distances = self.motion_images_q[:last_keyframe_chunk]
+            self.seq_q_original = self.seq_q_original[last_keyframe:]
+            self.seqs_q_normalized = self.seqs_q_normalized[last_keyframe_chunk:]
+            self.motion_images_q = self.motion_images_q[last_keyframe_chunk:]
+            self.featvecs_q = self.featvecs_q[last_keyframe_chunk:]
+            self.distances = self.distances[last_keyframe_chunk:]
             self.keyframes = []
             self.seq_repetitions = []
         return seq_repetitions
 
     def reset(self):
+        # Reset repcounter data
         self.seq_q_original = None
         self.seqs_q_normalized = []
         self.motion_images_q = []
