@@ -9,7 +9,6 @@ from mofex.preprocessing.helpers import to_motionimg_bp_minmax
 import mofex.feature_vectors as featvec
 import mofex.model_loader as model_loader
 
-# TODO: IISY Indices und minmax and IISY indices anpassen
 # * Must work for all tracking formats. Add params or find better solution
 # Indices constants for body parts that define normalized orientation of the skeleton
 # center -> pelvis
