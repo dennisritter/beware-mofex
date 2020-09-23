@@ -5,10 +5,10 @@ import mofex.preprocessing.normalizations as mofex_norm
 import mana.utils.math.normalizations as normalizations
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
 from mana.models.sequence_transforms import SequenceTransforms
-from mofex.solver.mka_beware_rep_counter import RepCounter
+from mofex.solver.beware_rep_counter import RepCounter
 
-# src_root = './data/sequences/mka-beware-1.1/'
-src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-10-48'
+src_root = './data/sequences/mka-beware-1.1/squat'
+# src_root = './data/sequences/mka-beware-1.1-sets/Christopher/squat/19-08-2020-12-10-48'
 # src_root = './data/sequences/test'
 
 dump_root = 'data/motion_images'
@@ -36,7 +36,7 @@ seq_loader = SequenceLoaderMKA(seq_transforms)
 
 # Load sequences
 seqs = []
-for filename in Path(src_root).rglob('*.json'):
+for filename in Path(src_root).rglob('squat_256.json'):
     # print(str(filename).replace('\\', '/').split('/'))
     filename_split = str(filename).replace('\\', '/').split('/')
     seq_name = filename_split[-1]  # The filename (eg: 'myname.json')
