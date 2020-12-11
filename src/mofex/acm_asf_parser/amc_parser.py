@@ -209,7 +209,7 @@ def parse_asf(file_path):
 
 
 def parse_amc(file_path):
-    with open(file_path) as f:
+    with open(file_path, encoding='iso-8859-1') as f:
         content = f.read().splitlines()
 
     for idx, line in enumerate(content):
