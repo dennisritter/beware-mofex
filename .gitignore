@@ -258,4 +258,5 @@ TAGS
 
 ### CUSTOM
 data/*
+output/*
 skeleton.html
