@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import json
 import os
 from pathlib import Path
 from sklearn.model_selection import train_test_split
@@ -9,6 +10,47 @@ import mofex.preprocessing.normalizations as mofex_norm
 import mana.utils.math.normalizations as normalizations
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
 from mana.models.sequence_transforms import SequenceTransforms
+
+_format = {
+    "Pelvis": 0,
+    "SpineNavel": 1,
+    "SpineChest": 2,
+    "Neck": 3,
+    "ClavicleLeft": 4,
+    "ShoulderLeft": 5,
+    "ElbowLeft": 6,
+    "WristLeft": 7,
+    "HandLeft": 8,
+    "HandTipLeft": 9,
+    "ThumbLeft": 10,
+    "ClavicleRight": 11,
+    "ShoulderRight": 12,
+    "ElbowRight": 13,
+    "WristRight": 14,
+    "HandRight": 15,
+    "HandTipRight": 16,
+    "ThumbRight": 17,
+    "HipLeft": 18,
+    "KneeLeft": 19,
+    "AnkleLeft": 20,
+    "FootLeft": 21,
+    "HipRight": 22,
+    "KneeRight": 23,
+    "AnkleRight": 24,
+    "FootRight": 25,
+    "Head": 26,
+    "Nose": 27,
+    "EyeLeft": 28,
+    "EarLeft": 29,
+    "EyeRight": 30,
+    "EarRight": 31
+}
+
+
+def positions_to_list(positions: np.ndarray):
+    positions = np.reshape(positions, (len(positions), -1))
+    positions = [frame.tolist() for frame in positions]
+    return positions
 
 
 def to_motionimg_bp_minmax(
@@ -63,8 +105,9 @@ def to_motionimg_bp_minmax(
 # Root folder for Sequence files
 src_root = './data/mka-beware-1.1/sequences/mka-beware-1.1/'
 
-dump_root = 'data/mka-beware-1.1/motion_images'
-dataset_name = 'mka-beware-1.1_downstream'
+motion_dump_root = 'data/mka-beware-1.1/motion_images'
+chunk_dump_root = 'data/mka-beware-1.1/sequence_chunks'
+dataset_name = 'mka-beware-1.1_cookie'
 # Indices constants for body parts that define normalized orientation of the skeleton
 # center -> pelvis
 CENTER_IDX = 0
@@ -111,10 +154,15 @@ for seq_class in seq_labeled_dict:
     for i, seq in enumerate(seq_labeled_dict[seq_class]):
         # create copy of seq
         _seq = seq[0]
+        # append first frame to list as norep
+        if 'norep' in chunks_labeled_dict:
+            chunks_labeled_dict['norep'].append(_seq[:])
+        else:
+            chunks_labeled_dict['norep'] = [_seq[:]]
 
         first = True
         # loop over sequence timesteps * 5 (5x same rep)
-        for j in [1, -1, 1, -1, 1]:
+        for idx, j in enumerate([1, -1, 1, -1, 1]):
             for k in range(len(seq)):
                 # skip first frame
                 if first:
@@ -126,20 +174,28 @@ for seq_class in seq_labeled_dict:
                     _k = len(seq) - k
                 else:
                     _k = k
+
                 _seq.append(seq[_k])
 
-                seqs_chunked.append(_seq)
-
-                # each full passthrough is a rep
-                if k == len(seq) - 1:
+                # each full passthrough (+- 5) is a rep
+                if k >= len(seq) - 6:
                     rep = 'rep'
+                elif idx > 0 and k <= 4:
+                    rep = 'rep'
+                # if k == len(seq) - 1:
                 else:
                     rep = 'norep'
 
+                _seq_append = _seq[:]
+                _seq_append.name = f'{seq_class}_{i}_c{len(_seq_append)-1}'
+                _seq_append.desc = rep
+
+                seqs_chunked.append(_seq_append)
+
                 if rep in chunks_labeled_dict:
-                    chunks_labeled_dict[rep].append(_seq)
+                    chunks_labeled_dict[rep].append(_seq_append)
                 else:
-                    chunks_labeled_dict[rep] = [_seq]
+                    chunks_labeled_dict[rep] = [_seq_append]
 
 # Filter Outliers and get xyz_minmax values
 iqr_factor_x = 2.5
@@ -153,10 +209,10 @@ minmax_xyz = xyz_minmax_coords_per_bodypart(
 # ymin, ymax = minmax_xyz[1]
 # zmin, zmax = minmax_xyz[2]
 
-minmax_filename = f'{dump_root}/{dataset_name}/minmax_values.txt'
+minmax_filename = f'{motion_dump_root}/{dataset_name}/minmax_values.txt'
 # Create basic text file to store(remember) the used min/max values
-if not os.path.isdir(f'{dump_root}/{dataset_name}'):
-    os.makedirs(f'{dump_root}/{dataset_name}')
+if not os.path.isdir(f'{motion_dump_root}/{dataset_name}'):
+    os.makedirs(f'{motion_dump_root}/{dataset_name}')
 minmax_file = open(minmax_filename, 'w')
 # minmax_file.write(
 #     f'x: [{xmin}, {xmax}]\ny: [{ymin}, {ymax}]\nz: [{zmin}, {zmax}]')
@@ -181,30 +237,62 @@ for label in chunks_labeled_dict:
     val_seqs.extend(label_split[1])
 
 # Train Set
-for seq in train_seqs:
+longest_seq = 0
+for idx, seq in enumerate(train_seqs):
+    print(f"Saving {idx}/{len(train_seqs)} from train set")
+    if len(seq) > longest_seq:
+        longest_seq = len(seq)
     # set and create directories
-    class_dir = f'{dump_root}/{dataset_name}/train/{seq.desc}'
-    out = f'{class_dir}/{seq.name}.png'
-    if not os.path.isdir(os.path.abspath(class_dir)):
-        os.makedirs(os.path.abspath(class_dir))
+    motion_dir = f'{motion_dump_root}/{dataset_name}/train/{seq.desc}'
+    chunk_dir = f'{chunk_dump_root}/{dataset_name}/train/{seq.desc}'
+    motion_out = f'{motion_dir}/{seq.name}.png'
+    chunk_out = f'{chunk_dir}/{seq.name}.json'
+    os.makedirs(os.path.abspath(motion_dir), exist_ok=True)
+    os.makedirs(os.path.abspath(chunk_dir), exist_ok=True)
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
     # img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
     img = to_motionimg_bp_minmax(seq,
                                  output_size=(256, 256),
                                  minmax_per_bp=minmax_xyz)
-    cv2.imwrite(out, img)
+    cv2.imwrite(motion_out, img)
+    out_json = {
+        "name": seq.name,
+        "date": "2020-08-19T15:44:52.1809407+02:00",
+        "format": _format,
+        "timestamps": np.arange(0, len(seq)).tolist(),
+        "positions": positions_to_list(seq.positions)
+    }
+    with open(chunk_out, 'w') as jf:
+        json.dump(out_json, jf)
+print(f"Longest sequence in train contains {longest_seq} timesteps.")
+
 # Validation Set
-for seq in val_seqs:
-    # set and create directories
-    class_dir = f'{dump_root}/{dataset_name}/val/{seq.desc}'
-    out = f'{class_dir}/{seq.name}.png'
-    if not os.path.isdir(os.path.abspath(class_dir)):
-        os.makedirs(os.path.abspath(class_dir))
+longest_seq = 0
+for idx, seq in enumerate(val_seqs):
+    print(f"Saving {idx}/{len(val_seqs)} from val set")
+    if len(seq) > longest_seq:
+        longest_seq = len(seq)
+    motion_dir = f'{motion_dump_root}/{dataset_name}/val/{seq.desc}'
+    chunk_dir = f'{chunk_dump_root}/{dataset_name}/val/{seq.desc}'
+    motion_out = f'{motion_dir}/{seq.name}.png'
+    chunk_out = f'{chunk_dir}/{seq.name}.json'
+    os.makedirs(os.path.abspath(motion_dir), exist_ok=True)
+    os.makedirs(os.path.abspath(chunk_dir), exist_ok=True)
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
     # img = seq.to_motionimg(output_size=(256, 256), minmax_pos_x=(xmin, xmax), minmax_pos_y=(ymin, ymax), minmax_pos_z=(zmin, zmax))
     img = to_motionimg_bp_minmax(seq,
                                  output_size=(256, 256),
                                  minmax_per_bp=minmax_xyz)
-    cv2.imwrite(out, img)
+    cv2.imwrite(motion_out, img)
+    out_json = {
+        "name": seq.name,
+        "date": "2020-08-19T15:44:52.1809407+02:00",
+        "format": _format,
+        "timestamps": np.arange(0, len(seq)).tolist(),
+        "positions": positions_to_list(seq.positions)
+    }
+    with open(chunk_out, 'w') as jf:
+        json.dump(out_json, jf)
+print(f"Longest sequence in val contains {longest_seq} timesteps.")

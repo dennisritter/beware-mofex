@@ -2,6 +2,8 @@ import cv2
 import os
 
 from pathlib import Path
+import numpy as np
+import json
 
 from sklearn.model_selection import train_test_split
 from mofex.preprocessing.helpers import xyz_minmax_coords
@@ -10,13 +12,48 @@ import mana.utils.math.normalizations as normalizations
 from mana.utils.data_operations.loaders.sequence_loader_hdm05 import SequenceLoaderHDM05
 from mana.models.sequence_transforms import SequenceTransforms
 
+_format = {
+    'root': 0,
+    'lhipjoint': 1,
+    'lfemur': 2,
+    'ltibia': 3,
+    'lfoot': 4,
+    'ltoes': 5,
+    'rhipjoint': 6,
+    'rfemur': 7,
+    'rtibia': 8,
+    'rfoot': 9,
+    'rtoes': 10,
+    'lowerback': 11,
+    'upperback': 12,
+    'thorax': 13,
+    'lowerneck': 14,
+    'upperneck': 15,
+    'head': 16,
+    'lclavicle': 17,
+    'lhumerus': 18,
+    'lradius': 19,
+    'lwrist': 20,
+    'lhand': 21,
+    'lfingers': 22,
+    'lthumb': 23,
+    'rclavicle': 24,
+    'rhumerus': 25,
+    'rradius': 26,
+    'rwrist': 27,
+    'rhand': 28,
+    'rfingers': 29,
+    'rthumb': 30
+}
+
 # Root folder for Sequence files
 src_root = './data/hdm05-122/sequences/hdm05-122/amc/'
 filename_asf = '*.asf'
 filename_amc = '*.amc'
 
-dump_root = 'data/hdm05-122/motion_images'
-dataset_name = 'hdm05-122_90-10_downstream'
+motion_dump_root = 'data/hdm05-122/motion_images'
+chunk_dump_root = 'data/hdm05-122/sequence_chunks'
+dataset_name = 'hdm05-122_90-10_cookie'
 
 
 def load_seqs_asf_amc_hdm05(root, regex_str_asf, regex_str_amc):
@@ -38,6 +75,12 @@ def load_seqs_asf_amc_hdm05(root, regex_str_asf, regex_str_amc):
         # seqs.append(Sequence.from_hdm05_asf_amc_files(asf_path=asf_path, amc_path=amc_path, name=amc_file, desc=class_dir.split('/')[-1]))
         # print(f'Loaded: {seqs[-1].name} -> Class = {seqs[-1].desc}')
     return seqs
+
+
+def positions_to_list(positions: np.ndarray):
+    positions = np.reshape(positions, (len(positions), -1))
+    positions = [frame.tolist() for frame in positions]
+    return positions
 
 
 # Indices constants for body parts that define normalized orientation of the skeleton
@@ -124,10 +167,10 @@ xmin, xmax = minmax_xyz[0]
 ymin, ymax = minmax_xyz[1]
 zmin, zmax = minmax_xyz[2]
 
-minmax_filename = f'{dump_root}/{dataset_name}/minmax_values.txt'
+minmax_filename = f'{motion_dump_root}/{dataset_name}/minmax_values.txt'
 # Create basic text file to store(remember) the used min/max values
-if not os.path.isdir(f'{dump_root}/{dataset_name}'):
-    os.makedirs(f'{dump_root}/{dataset_name}')
+if not os.path.isdir(f'{motion_dump_root}/{dataset_name}'):
+    os.makedirs(f'{motion_dump_root}/{dataset_name}')
 minmax_file = open(minmax_filename, 'w')
 minmax_file.write(
     f'x: [{xmin}, {xmax}]\ny: [{ymin}, {ymax}]\nz: [{zmin}, {zmax}]')
@@ -150,30 +193,63 @@ for label in chunks_labeled_dict.keys():
     val_seqs.extend(label_split[1])
 
 # Train Set
-for seq in train_seqs:
+longest_seq = 0
+for idx, seq in enumerate(train_seqs):
+    print(f"Saving {idx}/{len(train_seqs)} from train set")
+    if len(seq) > longest_seq:
+        longest_seq = len(seq)
     # set and create directories
-    class_dir = f'{dump_root}/{dataset_name}/train/{seq.desc}'
-    out = f'{class_dir}/{seq.name}.png'
-    if not os.path.isdir(os.path.abspath(class_dir)):
-        os.makedirs(os.path.abspath(class_dir))
+    motion_dir = f'{motion_dump_root}/{dataset_name}/train/{seq.desc}'
+    chunk_dir = f'{chunk_dump_root}/{dataset_name}/train/{seq.desc}'
+    motion_out = f'{motion_dir}/{seq.name}.png'
+    chunk_out = f'{chunk_dir}/{seq.name}.json'
+    os.makedirs(os.path.abspath(motion_dir), exist_ok=True)
+    os.makedirs(os.path.abspath(chunk_dir), exist_ok=True)
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
     img = seq.to_motionimg(output_size=(256, 256),
                            minmax_pos_x=(xmin, xmax),
                            minmax_pos_y=(ymin, ymax),
                            minmax_pos_z=(zmin, zmax))
-    cv2.imwrite(out, img)
+    cv2.imwrite(motion_out, img)
+    out_json = {
+        "name": seq.name,
+        "date": "2020-08-19T15:44:52.1809407+02:00",
+        "format": _format,
+        "timestamps": np.arange(0, len(seq)).tolist(),
+        "positions": positions_to_list(seq.positions)
+    }
+    with open(chunk_out, 'w') as jf:
+        json.dump(out_json, jf)
+print(f"Longest sequence in train contains {longest_seq} timesteps.")
+
 # Validation Set
-for seq in val_seqs:
+longest_seq = 0
+for idx, seq in enumerate(val_seqs):
+    print(f"Saving {idx}/{len(val_seqs)} from val set")
+    if len(seq) > longest_seq:
+        longest_seq = len(seq)
     # set and create directories
-    class_dir = f'{dump_root}/{dataset_name}/val/{seq.desc}'
-    out = f'{class_dir}/{seq.name}.png'
-    if not os.path.isdir(os.path.abspath(class_dir)):
-        os.makedirs(os.path.abspath(class_dir))
+    motion_dir = f'{motion_dump_root}/{dataset_name}/val/{seq.desc}'
+    chunk_dir = f'{chunk_dump_root}/{dataset_name}/val/{seq.desc}'
+    motion_out = f'{motion_dir}/{seq.name}.png'
+    chunk_out = f'{chunk_dir}/{seq.name}.json'
+    os.makedirs(os.path.abspath(motion_dir), exist_ok=True)
+    os.makedirs(os.path.abspath(chunk_dir), exist_ok=True)
     # Create and save Motion Image with defined output size and X,Y,Z min/max values to map respective color channels to positions.
     # (xmin, xmax) -> RED(0, 255), (ymin, ymax) -> GREEN(0, 255), (zmin, zmax) -> BLUE(0, 255),
     img = seq.to_motionimg(output_size=(256, 256),
                            minmax_pos_x=(xmin, xmax),
                            minmax_pos_y=(ymin, ymax),
                            minmax_pos_z=(zmin, zmax))
-    cv2.imwrite(out, img)
+    cv2.imwrite(motion_out, img)
+    out_json = {
+        "name": seq.name,
+        "date": "2020-08-19T15:44:52.1809407+02:00",
+        "format": _format,
+        "timestamps": np.arange(0, len(seq)).tolist(),
+        "positions": positions_to_list(seq.positions)
+    }
+    with open(chunk_out, 'w') as jf:
+        json.dump(out_json, jf)
+print(f"Longest sequence in val contains {longest_seq} timesteps.")
