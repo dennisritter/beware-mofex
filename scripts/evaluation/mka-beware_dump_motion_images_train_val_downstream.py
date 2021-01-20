@@ -121,7 +121,6 @@ UP_IDX = 1
 seq_transforms = SequenceTransforms(SequenceTransforms.mka_to_iisy())
 seq_loader = SequenceLoaderMKA(seq_transforms)
 seq_labeled_dict = {}
-seqs = []
 for filename in Path(src_root).rglob('*.json'):
     # print(str(filename).replace('\\', '/').split('/'))
     filename_split = str(filename).replace('\\', '/').split('/')
@@ -144,8 +143,6 @@ for filename in Path(src_root).rglob('*.json'):
         seq_labeled_dict[seq.desc].append(seq)
     else:
         seq_labeled_dict[seq.desc] = [seq]
-    # Also store all seqs in a list
-    seqs.append(seq)
     print(f'Loaded: {seq.name} [{seq.desc}]')
 
 seqs_chunked = []
@@ -154,11 +151,15 @@ for seq_class in seq_labeled_dict:
     for i, seq in enumerate(seq_labeled_dict[seq_class]):
         # create copy of seq
         _seq = seq[0]
+
         # append first frame to list as norep
+        _seq_append = _seq[:]
+        _seq_append.name = f'{seq_class}_{i}_c{len(_seq_append)-1}'
+        _seq_append.desc = 'norep'
         if 'norep' in chunks_labeled_dict:
-            chunks_labeled_dict['norep'].append(_seq[:])
+            chunks_labeled_dict['norep'].append(_seq_append)
         else:
-            chunks_labeled_dict['norep'] = [_seq[:]]
+            chunks_labeled_dict['norep'] = [_seq_append]
 
         first = True
         # loop over sequence timesteps * 5 (5x same rep)
