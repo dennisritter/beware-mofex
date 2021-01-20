@@ -4,7 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_val_acc_on_batch(val_accuracies, model_name, dataset_name, optimizer, num_pretrained_epochs=0, path='data', show=False, save=True):
+def plot_val_acc_on_batch(val_accuracies,
+                          model_name,
+                          dataset_name,
+                          optimizer,
+                          num_pretrained_epochs=0,
+                          path='data',
+                          show=False,
+                          save=True):
     """ Plots the validation accuracies on batch number. 
 
         Args:
@@ -31,3 +38,4 @@ def plot_val_acc_on_batch(val_accuracies, model_name, dataset_name, optimizer, n
         print(f'Saved Acc/Epoch training Plot to: {path}/{plot_name}.png')
     if show:
         plt.show()
+    plt.clf()

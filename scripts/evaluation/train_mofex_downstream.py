@@ -42,7 +42,8 @@ def pre_train():
     # Models to choose from [resnet18, resnet50, resnet101]
     _models = ['resnet101']
     _datasets = {
-        'hdm05-122': "./data/hdm05-122/motion_images/hdm05-122_90-10_downstream"
+        'hdm05-122_90-10_cookie':
+        "./data/hdm05-122/motion_images/hdm05-122_90-10_cookie"
     }
 
     # The squared input size of motion images
@@ -50,7 +51,7 @@ def pre_train():
     # Number of epochs to train for
     num_epochs = 50
     # Batch size for training (change depending on how much memory you have)
-    batch_size = 8
+    batch_size = 32
 
     # ----- Training Setup
     for dataset_name in _datasets.keys():
@@ -58,7 +59,7 @@ def pre_train():
         num_classes = 122
 
         for model_name in _models:
-            for opti in ['sgd', 'adam']:
+            for opti in ['sgd']:
                 # Initialize the model
                 model, input_size = model_loader.initialize_model(
                     model_name,
@@ -123,7 +124,7 @@ def pre_train():
 
                 # ----- Post Training
                 trained_models_path = Path(
-                    f'./output/trained_downstream/{dataset_name}').resolve()
+                    f'./output/pretrained/{dataset_name}').resolve()
 
                 # Save model state
                 model_saver.save_model(model, trained_models_path, model_name,
@@ -142,7 +143,108 @@ def pre_train():
 
 def fine_tune():
     # TODO: load model without last layer + add new sequential for downstream
-    pass
+
+    # Models to choose from [resnet18, resnet50, resnet101]
+    _models = ['resnet101_hdm05-122_90-10_cookie_sgd_e50']
+    _datasets = {
+        'mka-beware-1.1_cookie':
+        "./data/mka-beware-1.1/motion_images/mka-beware-1.1_cookie"
+    }
+
+    # The squared input size of motion images
+    input_size = 256
+    # Number of epochs to train for
+    num_epochs = 50
+    # Batch size for training (change depending on how much memory you have)
+    batch_size = 32
+
+    # ----- Training Setup
+    for dataset_name in _datasets.keys():
+        # Number of classes in the dataset
+        num_classes = 2
+
+        for model_name in _models:
+            for opti in ['sgd']:
+                # Initialize the model
+                model = model_loader.load_trained_model(
+                    model_name="resnet101_hdm05-122_90-10_cookie",
+                    state_dict_path=
+                    f'./output/pretrained/hdm05-122_90-10_cookie/{model_name}.pt'
+                )
+                model_loader.set_output_layer(model, num_classes)
+
+                # Data augmentation and normalization for training and validation repectively
+                data_transforms = {
+                    'train':
+                    transforms.Compose([
+                        transforms.ToTensor(),
+                        transforms.Normalize([0.485, 0.456, 0.406],
+                                             [0.229, 0.224, 0.225])
+                    ]),
+                    'val':
+                    transforms.Compose([
+                        transforms.Resize(input_size),
+                        transforms.CenterCrop(input_size),
+                        transforms.ToTensor(),
+                        transforms.Normalize([0.485, 0.456, 0.406],
+                                             [0.229, 0.224, 0.225])
+                    ]),
+                }
+
+                # Create training and validation datasets
+                image_datasets = {
+                    x: datasets.ImageFolder(
+                        os.path.join(_datasets[dataset_name], x),
+                        data_transforms[x])
+                    for x in ['train', 'val']
+                }
+                # Create training and validation dataloaders
+                dataloaders_dict = {
+                    x: torch.utils.data.DataLoader(image_datasets[x],
+                                                   batch_size=batch_size,
+                                                   shuffle=True,
+                                                   num_workers=12)
+                    for x in ['train', 'val']
+                }
+
+                # Observe that all parameters are being optimized
+                if opti == 'sgd':
+                    optimizer = optim.SGD(model.parameters(),
+                                          lr=0.001,
+                                          momentum=0.9)
+                else:
+                    optimizer = optim.Adam(model.parameters())
+
+                # Set Loss function
+                criterion = nn.CrossEntropyLoss()
+
+                # ----- The actual training
+
+                # Train and evaluate
+                model, val_acc_history = model_trainer.train_model(
+                    model,
+                    dataloaders_dict,
+                    criterion,
+                    optimizer,
+                    num_epochs=num_epochs)
+
+                # ----- Post Training
+                trained_models_path = Path(
+                    f'./output/finetuned/{dataset_name}').resolve()
+
+                # Save model state
+                model_saver.save_model(model, trained_models_path, model_name,
+                                       dataset_name, num_epochs, opti)
+                # Plot the training curves of validation accuracy vs. number of epochs
+                val_acc_history = [acc.cpu().numpy() for acc in val_acc_history]
+                model_plotter.plot_val_acc_on_batch(val_acc_history,
+                                                    model_name,
+                                                    dataset_name,
+                                                    opti,
+                                                    path=trained_models_path,
+                                                    num_pretrained_epochs=0,
+                                                    show=True,
+                                                    save=True)
 
 
 if __name__ == "__main__":
