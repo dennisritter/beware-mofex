@@ -59,6 +59,9 @@ def load_trained_model(
     elif model_name == "resnet101_hdm05-122_90-10_cookie":
         model = resnet.load_resnet101_finetuned_hdm05_122_9010(
             False, state_dict_path=state_dict_path)
+    elif model_name == "resnet101_hdm05-122_90-10_cookie_downstream":
+        model = resnet.load_resnet101_finetuned_cookie_downstream(
+            False, state_dict_path=state_dict_path)
     elif model_name == "resnet101_cmu-30_80-20_256":
         model = resnet.load_resnet101_finetuned_cmu30_8020(
             state_dict_path=state_dict_path)
