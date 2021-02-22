@@ -107,7 +107,7 @@ src_root = './data/mka-beware-1.1/sequences/mka-beware-1.1/'
 
 motion_dump_root = 'data/mka-beware-1.1/motion_images'
 chunk_dump_root = 'data/mka-beware-1.1/sequence_chunks'
-dataset_name = 'mka-beware-1.1_cookie'
+dataset_name = 'mka-beware-1.1_cookie-2.0'
 # Indices constants for body parts that define normalized orientation of the skeleton
 # center -> pelvis
 CENTER_IDX = 0
@@ -163,7 +163,8 @@ for seq_class in seq_labeled_dict:
 
         first = True
         # loop over sequence timesteps * 5 (5x same rep)
-        for idx, j in enumerate([1, -1, 1, -1, 1]):
+        # for idx, j in enumerate([1, -1, 1, -1, 1]):
+        for idx, j in enumerate([1]):
             for k in range(len(seq)):
                 # skip first frame
                 if first:
@@ -197,6 +198,17 @@ for seq_class in seq_labeled_dict:
                     chunks_labeled_dict[rep].append(_seq_append)
                 else:
                     chunks_labeled_dict[rep] = [_seq_append]
+
+                # for k +- 5 (rep) create more reps with start +-5
+                if rep == 'rep':
+                    for l in range(1, 5):
+                        for m in range(1, 4):
+                            _seq_append = _seq[l::m]
+                            _seq_append.name = f'{seq_class}_{i}_c{len(_seq_append)-1}_f{l}_s{m}'
+                            _seq_append.desc = rep
+
+                            seqs_chunked.append(_seq_append)
+                            chunks_labeled_dict[rep].append(_seq_append)
 
 # Filter Outliers and get xyz_minmax values
 iqr_factor_x = 2.5
