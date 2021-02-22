@@ -31,28 +31,30 @@ def create_dropout_set(percent: float):
     print(f'Start creating dropout {percent} set.')
     for _type in ['motion_images', 'sequence_chunks']:
         for _set in ['train', 'val']:
-            print(f'.. creating {_type} - {_set} dataset.')
-            os.makedirs('data/mka-beware-1.1/' + _type +
+            for _class in ['rep', 'norep']:
+                print(f'.. creating {_type} - {_set} dataset.')
+                os.makedirs('data/mka-beware-1.1/' + _type +
+                            '/mka-beware-1.1_cookie_dropout-' + str(percent) +
+                            '/' + _set + '/' + _class,
+                            exist_ok=True)
+                for idx, _file in enumerate(
+                        sorted(
+                            list(
+                                glob.glob('data/mka-beware-1.1/' + _type +
+                                          '/mka-beware-1.1_cookie/' + _set +
+                                          '/' + _class + '/*')))):
+                    if idx % 1000 == 0:
+                        print(f'.. processed: {idx}')
+
+                    # skip 1 - percentage frames of norep
+                    if _class == 'norep':
+                        if not random.random() < percent:
+                            continue
+
+                    shutil.copy(
+                        _file, 'data/mka-beware-1.1/' + _type +
                         '/mka-beware-1.1_cookie_dropout-' + str(percent) + '/' +
-                        _set + '/norep',
-                        exist_ok=True)
-            for idx, _file in enumerate(
-                    sorted(
-                        list(
-                            glob.glob('data/mka-beware-1.1/' + _type +
-                                      '/mka-beware-1.1_cookie/' + _set +
-                                      '/norep/*')))):
-                if idx % 1000 == 0:
-                    print(f'.. processed: {idx}')
-
-                # skip 1 - percentage frames
-                if not random.random() < percent:
-                    continue
-
-                shutil.copy(
-                    _file, 'data/mka-beware-1.1/' + _type +
-                    '/mka-beware-1.1_cookie_dropout-' + str(percent) + '/' +
-                    _set + '/norep')
+                        _set + '/' + _class)
     print('DONE')
     print('------------------------')
 
