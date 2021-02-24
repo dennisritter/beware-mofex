@@ -1,17 +1,54 @@
 import numpy as np
 from pathlib import Path
-from mofex.preprocessing.skeleton_visualizer import SkeletonVisualizer
-import mofex.preprocessing.normalizations as mofex_norm
-import mana.utils.math.normalizations as normalizations
+import json
 from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
-from mana.models.sequence_transforms import SequenceTransforms
-from mofex.solver.beware_rep_counter import RepCounter
 
-src_root = './data/sequences/mka-vitalab-2020/processed/'
 
-# dump_root = 'data/motion_images'
+def positions_to_list(positions: np.ndarray):
+    positions = np.reshape(positions, (len(positions), -1))
+    positions = [frame.tolist() for frame in positions]
+    return positions
+
+
+src_root = './data/sequences/mka-vitalab-2020/recordings/10_frame_batches'
+
+dump_root = './data/sequences/mka-vitalab-2020/recordings/10_frame_batches/merged'
 dataset_name = 'mka-vitalab-2020'
 # Indices constants for body parts that define normalized orientation of the skeleton
+_format = {
+    "Pelvis": 0,
+    "SpineNavel": 1,
+    "SpineChest": 2,
+    "Neck": 3,
+    "ClavicleLeft": 4,
+    "ShoulderLeft": 5,
+    "ElbowLeft": 6,
+    "WristLeft": 7,
+    "HandLeft": 8,
+    "HandTipLeft": 9,
+    "ThumbLeft": 10,
+    "ClavicleRight": 11,
+    "ShoulderRight": 12,
+    "ElbowRight": 13,
+    "WristRight": 14,
+    "HandRight": 15,
+    "HandTipRight": 16,
+    "ThumbRight": 17,
+    "HipLeft": 18,
+    "KneeLeft": 19,
+    "AnkleLeft": 20,
+    "FootLeft": 21,
+    "HipRight": 22,
+    "KneeRight": 23,
+    "AnkleRight": 24,
+    "FootRight": 25,
+    "Head": 26,
+    "Nose": 27,
+    "EyeLeft": 28,
+    "EarLeft": 29,
+    "EyeRight": 30,
+    "EarRight": 31
+}
 # center -> pelvis
 CENTER_IDX = 0
 # left -> hip_left
@@ -34,59 +71,40 @@ seq_loader = SequenceLoaderMKA()
 seqs = []
 # Example name: squat_u1_n10.json
 # <exercise>_<userID>_<repetitions>.json
+last_date_dir = None
+count = 0
 for filename in Path(src_root).rglob('*.json'):
     filename = str(filename).replace('\\', '/')
-    print(f'Load File: filename')
+    print(f'Load File: {filename}')
     filename_split = filename.replace('\\', '/').split('/')
     seq_name = filename_split[-1][:-5]  # The filename (eg: 'myname.json')
-    # seq_class = filename_split[-2]  # The class (eG: 'squat')
+    date_dir = filename_split[-2]  # The class (eG: 'squat')
     # Load
-    seq = seq_loader.load(path=filename, name=seq_name[:-5])
+    try:
+        seq = seq_loader.load(path=filename, name=seq_name[:-5], desc=date_dir)
+    except:
+        continue
     print(f'{seq.name}: frames = {len(seq)} ')
-    seqs.append(seq)
+    if date_dir != last_date_dir and last_date_dir != None or len(seqs) >= 50:
+        for i, s in enumerate(seqs[1:]):
+            if len(s.positions) > 0:
+                seqs[0].append(s)
+        if len(seqs) > 0:
+            seq_out = seqs[0]
+            out_json = {
+                "name": seq_out.name,
+                "format": _format,
+                "timestamps": np.arange(0, len(seq_out)).tolist(),  # aufsteigendes array (0 - X)
+                "positions": positions_to_list(seq_out.positions)
+            }
+            with open(f'{dump_root}/session_{date_dir}_{count}.json', 'w') as jf:
+                json.dump(out_json, jf)
+                print(f'Saved merged sequence: {str(jf)}')
+            seqs = []
+            count += 1
+    else:
+        if len(seq.positions) > 0:
+            seqs.append(seq)
+    last_date_dir = date_dir
+
 #Append Sequences to one set (one sequence)
-# for seq in seqs[1:]:
-#     seqs[0].append(seq)
-# seq_q = seqs[0]
-
-# sv = SkeletonVisualizer(_normalize_seq(seq_q))
-# sv.show(auto_open=True)
-
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[12:72]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[72:128]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[128:184]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[184:240]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[240:296]))
-
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[296:352]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[352:408]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[408:460]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[460:516]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[516:572]))
-
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[572:632]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[632:688]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[688:740]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[740:796]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[796:856]))
-
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[856:916]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[916:976]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[976:1036]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[1036:1092]))
-# sv = SkeletonVisualizer(_normalize_seq(seq_q[1092:]))
-# sv.show(auto_open=True)
-
-# for filename in Path(src_root).rglob('squat_255.json'):
-#     # print(str(filename).replace('\\', '/').split('/'))
-#     filename_split = str(filename).replace('\\', '/').split('/')
-#     seq_name = filename_split[-1]  # The filename (eg: 'myname.json')
-#     seq_class = filename_split[-2]  # The class (eG: 'squat')
-#     seq = seq_loader.load(path=f'{str(filename)}', name=seq_name[:-5], desc=seq_class)
-#     # Normalize
-#     seq.positions = mofex_norm.center_positions(seq.positions)
-#     seq.positions = normalizations.pose_position(seq.positions, seq.positions[:, CENTER_IDX, :])
-#     mofex_norm.orientation(seq.positions, seq.positions[0, LEFT_IDX, :], seq.positions[0, RIGHT_IDX, :], seq.positions[0, UP_IDX, :])
-
-#     sv = SkeletonVisualizer(seq)
-#     sv.show(auto_open=True)
