@@ -43,8 +43,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs):
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+                inputs = inputs.float().to(device)
+                labels = labels.long().to(device)
 
                 # ? What is an optimizer/gradient
                 # zero the parameter gradients
@@ -70,9 +70,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs):
                 running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
-            epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+            epoch_acc = running_corrects.double() / len(
+                dataloaders[phase].dataset)
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss,
+                                                       epoch_acc))
 
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
@@ -82,7 +84,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs):
                 val_acc_history.append(epoch_acc)
 
     time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60,
+                                                        time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
 
     # load best model weights
