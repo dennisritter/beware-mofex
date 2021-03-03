@@ -36,6 +36,8 @@ import mofex.model_loader as model_loader
 import mofex.model_saver as model_saver
 import mofex.model_plotter as model_plotter
 import mofex.model_trainer as model_trainer
+from mofex.mka_loader import mka_loader
+import argparse
 
 
 def pre_train():
@@ -142,19 +144,23 @@ def pre_train():
 
 
 def fine_tune():
-    # TODO: load model without last layer + add new sequential for downstream
-
     # Models to choose from [resnet18, resnet50, resnet101]
     _models = ['resnet101_hdm05-122_90-10_cookie_sgd_e50']
     _datasets = {
-        'mka-beware-1.1_cookie':
-        "./data/mka-beware-1.1/motion_images/mka-beware-1.1_cookie"
+        # 'mka-beware-1.1_cookie':
+        # "./data/mka-beware-1.1/motion_images/mka-beware-1.1_cookie",
+        # 'mka-beware-1.1_cookie_dropout-0.2':
+        # "./data/mka-beware-1.1/motion_images/mka-beware-1.1_cookie_dropout-0.2",
+        # 'mka-beware-1.1_cookie_dropout-0.4':
+        # "./data/mka-beware-1.1/motion_images/mka-beware-1.1_cookie_dropout-0.4",
+        'mka-beware-1.1_cookie-2.0':
+        "./data/mka-beware-1.1/motion_images/mka-beware-1.1_cookie-2.0",
     }
 
     # The squared input size of motion images
     input_size = 256
     # Number of epochs to train for
-    num_epochs = 50
+    num_epochs = 1
     # Batch size for training (change depending on how much memory you have)
     batch_size = 32
 
@@ -247,6 +253,78 @@ def fine_tune():
                                                     save=True)
 
 
+def train_seq():
+    # Models to choose from [resnet18, resnet50, resnet101]
+    _models = ['resnet101']
+    _datasets = {
+        'mka-beware-1.1_cookie-3.0':
+        "./data/mka-beware-1.1/sequence_chunks/mka-beware-1.1_cookie-3.0",
+    }
+
+    args = argparse.Namespace
+    args.batch_size = 32
+    args.not_shuffle = False  # False -> shuffle
+    args.num_workers = 0
+    args.preload_gpu = True
+    args.num_classes = 2
+    args.num_epochs = 50
+    args.input_size = 96
+
+    # ----- Training Setup
+    for dataset_name in _datasets.keys():
+        args.dataset_path = _datasets[dataset_name]
+        for model_name in _models:
+
+            for opti in ['sgd']:
+                # Initialize the model
+                model, input_size = model_loader.initialize_model(
+                    model_name,
+                    args.num_classes,
+                    input_size=args.input_size,
+                    pretrained=False)
+                train_loader, val_loader = mka_loader(args)
+                dataloaders_dict = {'train': train_loader, 'val': val_loader}
+
+                if opti == 'sgd':
+                    optimizer = optim.SGD(model.parameters(),
+                                          lr=0.001,
+                                          momentum=0.9)
+                else:
+                    optimizer = optim.Adam(model.parameters())
+
+                # Set Loss function
+                criterion = nn.CrossEntropyLoss()
+
+                # ----- The actual training
+
+                # Train and evaluate
+                model, val_acc_history = model_trainer.train_model(
+                    model,
+                    dataloaders_dict,
+                    criterion,
+                    optimizer,
+                    num_epochs=args.num_epochs)
+
+                # ----- Post Training
+                trained_models_path = Path(
+                    f'./output/pretrained/{dataset_name}').resolve()
+
+                # Save model state
+                model_saver.save_model(model, trained_models_path, model_name,
+                                       dataset_name, args.num_epochs, opti)
+                # Plot the training curves of validation accuracy vs. number of epochs
+                val_acc_history = [acc.cpu().numpy() for acc in val_acc_history]
+                model_plotter.plot_val_acc_on_batch(val_acc_history,
+                                                    model_name,
+                                                    dataset_name,
+                                                    opti,
+                                                    path=trained_models_path,
+                                                    num_pretrained_epochs=0,
+                                                    show=True,
+                                                    save=True)
+
+
 if __name__ == "__main__":
-    pre_train()
-    fine_tune()
+    # pre_train()
+    # fine_tune()
+    train_seq()
