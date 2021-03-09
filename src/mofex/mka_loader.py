@@ -152,7 +152,7 @@ def mka_loader(args: argparse.Namespace) -> Tuple[DataLoader, DataLoader]:
 
     loader_params = {
         'batch_size': args.batch_size,
-        'shuffle': args.not_shuffle,
+        'shuffle': args.shuffle,
         'num_workers': args.num_workers,
         'pin_memory': not args.preload_gpu,
         # 'collate_fn': pad_collate,

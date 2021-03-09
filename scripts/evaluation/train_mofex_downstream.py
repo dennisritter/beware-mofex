@@ -262,9 +262,9 @@ def train_seq():
     }
 
     args = argparse.Namespace
-    args.batch_size = 32
-    args.not_shuffle = False  # False -> shuffle
-    args.num_workers = 0
+    args.batch_size = 128
+    args.shuffle = True
+    args.num_workers = 12
     args.preload_gpu = True
     args.num_classes = 2
     args.num_epochs = 50
