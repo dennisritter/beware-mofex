@@ -7,8 +7,11 @@ import numpy as np
 import json
 import cv2
 
-from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
 from mana.utils.math.normalizations import pose_mean, pose_orientation, pose_position
+from mana.models.sequence_transforms import SequenceTransforms
+from mana.utils.data_operations.loaders.sequence_loader_mka import SequenceLoaderMKA
+
+from mofex.mka_loader import MKAToIISYNorm
 
 import torch
 import torch.nn as nn
@@ -248,8 +251,8 @@ def evaluate(model, path):
             pred = preds.item()
             if pred == 0:
                 results.append('norep')
-                if not last_pred == pred:
-                    print(f'idx: {idx} -> norep')
+                # if not last_pred == pred:
+                #     print(f'idx: {idx} -> norep')
                 last_pred = pred
 
             # 4. if rep -> reset motion image (sequence)
@@ -275,45 +278,192 @@ def evaluate(model, path):
     #       - use mka tool for creating new rep
 
 
+### Motion Images
+# model_list = [
+#     # 'output/finetuned/mka-beware-1.1_cookie/resnet101_hdm05-122_90-10_cookie_sgd_e50_mka-beware-1.1_cookie_sgd_e50.pt'
+#     # 'output/finetuned/mka-beware-1.1_cookie_dropout-0.2/resnet101_hdm05-122_90-10_cookie_sgd_e50_mka-beware-1.1_cookie_dropout-0.2_sgd_e50.pt',
+#     # 'output/finetuned/mka-beware-1.1_cookie-2.0/resnet101_hdm05-122_90-10_cookie_sgd_e50_mka-beware-1.1_cookie-2.0_sgd_e50.pt',
+#     'output/finetuned/mka-beware-1.1_cookie-2.0/resnet101_hdm05-122_90-10_cookie_sgd_e50_mka-beware-1.1_cookie-2.0_sgd_e1.pt',
+# ]
+
+# for model_path in model_list:
+
+#     # Initialize the model
+#     model = model_loader.load_trained_model(
+#         model_name="resnet101_hdm05-122_90-10_cookie_downstream",
+#         state_dict_path=model_path)
+#     model.to(device)
+
+#     # ##### Simple eval ######
+#     # dataset_path = 'data/test/simple'
+#     # print(f'------------------------')
+#     # print(f'Start evaluating: {model_path.split("/")[-1]}')
+#     # print(f'  using: {dataset_path}')
+#     # print(f'------------------------')
+#     # simple_evaluate(model, dataset_path)
+#     # print(f'\n')
+
+#     ##### TODO: Real-World eval ######
+#     dataset_pathes = [
+#         # 'data/test/merged/overheadpress_combined.json',
+#         # 'data/test/merged/squat_combined.json',
+#         # 'data/test/merged/tiptoestand_combined.json',
+#         # 'data/test/merged/diagonalpull_mixed_combined.json',
+#         # 'data/test/merged/diagonalpull_combined.json',
+#         'data/test/complex/unnamed_trackingsession_0.json',
+#         'data/test/complex/unnamed_trackingsession_1.json',
+#         'data/test/complex/unnamed_trackingsession_2.json',
+#     ]
+
+#     for path in dataset_pathes:
+#         print(f'------------------------')
+#         print(f'Start evaluating: {model_path.split("/")[-1]}')
+#         print(f'  using: {path}')
+#         print(f'------------------------')
+#         evaluate(model, path)
+#         print(f'\n')
+
+### Sequences
+
+
+def save_json(filename, sequence):
+    _format = {
+        "Pelvis": 0,
+        "SpineNavel": 1,
+        "SpineChest": 2,
+        "Neck": 3,
+        "ClavicleLeft": 4,
+        "ShoulderLeft": 5,
+        "ElbowLeft": 6,
+        "WristLeft": 7,
+        "HandLeft": 8,
+        "HandTipLeft": 9,
+        "ThumbLeft": 10,
+        "ClavicleRight": 11,
+        "ShoulderRight": 12,
+        "ElbowRight": 13,
+        "WristRight": 14,
+        "HandRight": 15,
+        "HandTipRight": 16,
+        "ThumbRight": 17,
+        "HipLeft": 18,
+        "KneeLeft": 19,
+        "AnkleLeft": 20,
+        "FootLeft": 21,
+        "HipRight": 22,
+        "KneeRight": 23,
+        "AnkleRight": 24,
+        "FootRight": 25,
+        "Head": 26,
+        "Nose": 27,
+        "EyeLeft": 28,
+        "EarLeft": 29,
+        "EyeRight": 30,
+        "EarRight": 31
+    }
+
+    def positions_to_list(positions: np.ndarray):
+        positions = np.reshape(positions, (len(positions), -1))
+        positions = [frame.tolist() for frame in positions]
+        return positions
+
+    out_json = {
+        "name": sequence.name,
+        "date": "2020-08-19T15:44:52.1809407+02:00",
+        "format": _format,
+        "timestamps": np.arange(0, len(sequence)).tolist(),
+        "positions": positions_to_list(sequence.positions)
+    }
+    with open(filename, 'w') as jf:
+        json.dump(out_json, jf)
+
+
+def norm_sequence(sequence):
+    # reshape to (#frames, flatten_bodypart_3d)
+    sequence.positions = np.reshape(sequence.positions,
+                                    (len(sequence.positions), -1))
+
+    # interpolate to 30 frames with 96 values
+    # create 30 steps between 0 and max len
+    _steps = np.linspace(0, len(sequence), num=30)
+    # for each value of the coordinates (#96 <- 32joints*3d) interpolate the steps (didn't find 3d interp function..)
+    # create an array of the list comp. and transpose it to retrieve original (30,96) shape
+    sequence.positions = np.array([
+        np.interp(_steps, np.arange(len(sequence.positions)),
+                  sequence.positions[:, idx])
+        for idx in range(sequence.positions.shape[1])
+    ]).T
+
+    # repeat array 3 times to re-create 3 channels
+    sequence.positions = np.repeat(np.expand_dims(sequence.positions, 0),
+                                   3,
+                                   axis=0)
+    return sequence
+
+
+def evaluate_sequence(model, path):
+
+    sequence_transforms = SequenceTransforms(
+        SequenceTransforms.mka_to_iisy(body_parts=False))
+    sequence_transforms.transforms.append(MKAToIISYNorm())
+    # sequence_transforms = SequenceTransforms([MKAToIISYNorm()])
+    sequence_loader = SequenceLoaderMKA(sequence_transforms)
+
+    sequence = sequence_loader.load(path=path)
+
+    start_idx = 0
+    results = []
+    model.eval()
+    with torch.no_grad():
+
+        last_pred = -1
+        for idx in range(len(sequence)):
+            _sequence = sequence[start_idx:idx + 1]
+            _sequence = norm_sequence(_sequence)
+
+            positions = torch.tensor(
+                _sequence.positions).unsqueeze(0).float().to(device)
+
+            outputs = model(positions)
+
+            _, preds = torch.max(outputs, 1)
+
+            pred = preds.item()
+            if pred == 1:
+                results.append('norep')
+                # if not last_pred == pred:
+                #     print(f'idx: {idx} -> rep')
+                last_pred = pred
+            else:
+                results.append('rep')
+                if not last_pred == pred:
+                    if not (idx + 1 - start_idx) < 20:
+                        print(
+                            f'idx: {idx} -> rep  -  len: {idx + 1 - start_idx}')
+                        start_idx = idx
+                last_pred = pred
+
+    with open('preds.log', 'w') as _file:
+        _file.writelines(results)
+
+
 model_list = [
-    # 'output/finetuned/mka-beware-1.1_cookie/resnet101_hdm05-122_90-10_cookie_sgd_e50_mka-beware-1.1_cookie_sgd_e50.pt'
-    # 'output/finetuned/mka-beware-1.1_cookie_dropout-0.2/resnet101_hdm05-122_90-10_cookie_sgd_e50_mka-beware-1.1_cookie_dropout-0.2_sgd_e50.pt',
-    'output/finetuned/mka-beware-1.1_cookie-2.0/resnet101_hdm05-122_90-10_cookie_sgd_e50_mka-beware-1.1_cookie-2.0_sgd_e50.pt',
+    'output/pretrained/mka-beware-1.1_cookie-3.0/resnet101_mka-beware-1.1_cookie-3.0_sgd_e5.pt',
 ]
 
 for model_path in model_list:
-
-    # Initialize the model
     model = model_loader.load_trained_model(
         model_name="resnet101_hdm05-122_90-10_cookie_downstream",
         state_dict_path=model_path)
-    model.to(device)
+    model = model.to(device)
 
-    # ##### Simple eval ######
-    # dataset_path = 'data/test/simple'
-    # print(f'------------------------')
-    # print(f'Start evaluating: {model_path.split("/")[-1]}')
-    # print(f'  using: {dataset_path}')
-    # print(f'------------------------')
-    # simple_evaluate(model, dataset_path)
-    # print(f'\n')
-
-    ##### TODO: Real-World eval ######
-    dataset_pathes = [
-        # 'data/test/merged/overheadpress_combined.json',
-        # 'data/test/merged/squat_combined.json',
-        # 'data/test/merged/tiptoestand_combined.json',
-        # 'data/test/merged/diagonalpull_mixed_combined.json',
-        # 'data/test/merged/diagonalpull_combined.json',
-        'data/test/complex/unnamed_trackingsession_0.json',
-        'data/test/complex/unnamed_trackingsession_1.json',
-        'data/test/complex/unnamed_trackingsession_2.json',
-    ]
-
-    for path in dataset_pathes:
+    # for path in sorted(glob.glob('data/test/merged/*.json')):
+    # for path in sorted(glob.glob('data/test/complex/*.json')):
+    for path in sorted(
+            glob.glob('data/test/complex/05-03-2021-12-17-26/*.json')):
         print(f'------------------------')
         print(f'Start evaluating: {model_path.split("/")[-1]}')
         print(f'  using: {path}')
         print(f'------------------------')
-        evaluate(model, path)
+        evaluate_sequence(model, path)
         print(f'\n')
