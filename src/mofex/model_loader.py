@@ -4,11 +4,7 @@ import torch.nn as nn
 import mofex.models.resnet as resnet
 
 
-def initialize_model(model_name,
-                     num_classes,
-                     input_size=256,
-                     feature_extract=False,
-                     pretrained=True):
+def initialize_model(model_name, num_classes, input_size=256, feature_extract=False, pretrained=True):
     """ Returns a CNN model with the specified model_name with respect to the parameter settings.
 
         Args:
@@ -41,33 +37,22 @@ def initialize_model(model_name,
     return model, input_size
 
 
-def load_trained_model(
-    model_name,
-    remove_last_layer=True,
-    state_dict_path='./data/trained_models/hdm05-122_90-10/resnet18_hdm05-122_90-10.pt'
-):
+def load_trained_model(model_name, remove_last_layer=True, state_dict_path='./data/trained_models/hdm05-122_90-10/resnet18_hdm05-122_90-10.pt'):
     model = None
     if model_name == "resnet18_hdm05-122_90-10":
-        model = resnet.load_resnet18_finetuned_hdm05_122_9010(
-            state_dict_path=state_dict_path)
+        model = resnet.load_resnet18_finetuned_hdm05_122_9010(state_dict_path=state_dict_path)
     elif model_name == "resnet50_hdm05-122_90-10":
-        model = resnet.load_resnet50_finetuned_hdm05_122_9010(
-            state_dict_path=state_dict_path)
+        model = resnet.load_resnet50_finetuned_hdm05_122_9010(state_dict_path=state_dict_path)
     elif model_name == "resnet101_hdm05-122_90-10":
-        model = resnet.load_resnet101_finetuned_hdm05_122_9010(
-            state_dict_path=state_dict_path)
+        model = resnet.load_resnet101_finetuned_hdm05_122_9010(state_dict_path=state_dict_path)
     elif model_name == "resnet101_hdm05-122_90-10_cookie":
-        model = resnet.load_resnet101_finetuned_hdm05_122_9010(
-            False, state_dict_path=state_dict_path)
-    elif model_name == "resnet101_hdm05-122_90-10_cookie_downstream":
-        model = resnet.load_resnet101_finetuned_cookie_downstream(
-            False, state_dict_path=state_dict_path)
+        model = resnet.load_resnet101_finetuned_hdm05_122_9010(False, state_dict_path=state_dict_path)
+    elif model_name == "resnet101_mka-beware-1.1_cookie-3.0_sgd_e50":
+        model = resnet.load_resnet101_finetuned_cookie_downstream(False, state_dict_path=state_dict_path)
     elif model_name == "resnet101_cmu-30_80-20_256":
-        model = resnet.load_resnet101_finetuned_cmu30_8020(
-            state_dict_path=state_dict_path)
+        model = resnet.load_resnet101_finetuned_cmu30_8020(state_dict_path=state_dict_path)
     elif model_name == "resnet101_mka-beware-1.1":
-        model = resnet.load_resnet101_finetuned_mka7_9010(
-            state_dict_path=state_dict_path)
+        model = resnet.load_resnet101_finetuned_mka7_9010(state_dict_path=state_dict_path)
     else:
         print("Invalid model name, exiting...")
         exit()
