@@ -29,6 +29,7 @@ from mana.models.sequence_transforms import SequenceTransforms
 import mofex.preprocessing.normalizations as mofex_norm
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 
 def simple_evaluate(model, path):
@@ -417,6 +418,7 @@ def evaluate_sequence(model, path):
     with torch.no_grad():
 
         last_pred = -1
+        # for idx in range(0, len(sequence), 10):
         for idx in range(len(sequence)):
             _sequence = sequence[start_idx:idx + 1]
             _sequence = norm_sequence(_sequence)
@@ -425,30 +427,33 @@ def evaluate_sequence(model, path):
                 _sequence.positions).unsqueeze(0).float().to(device)
 
             outputs = model(positions)
+            # print(f'idx: {idx} - {outputs}')
 
             _, preds = torch.max(outputs, 1)
 
             pred = preds.item()
-            if pred == 1:
+            if pred == 0:
                 results.append('norep')
                 # if not last_pred == pred:
                 #     print(f'idx: {idx} -> rep')
                 last_pred = pred
             else:
                 results.append('rep')
-                if not last_pred == pred:
-                    if not (idx + 1 - start_idx) < 20:
-                        print(
-                            f'idx: {idx} -> rep  -  len: {idx + 1 - start_idx}')
-                        start_idx = idx
-                last_pred = pred
+                # if not last_pred == pred:
+                #     if not (idx + 1 - start_idx) < 2:
+                #         print(
+                #             f'idx: {idx} -> rep  -  len: {idx + 1 - start_idx}')
+                #         start_idx = idx
+                # last_pred = pred
+                print(f'idx: {idx} -> rep  -  len: {idx + 1 - start_idx}')
+                start_idx = idx
 
     with open('preds.log', 'w') as _file:
         _file.writelines(results)
 
 
 model_list = [
-    'output/pretrained/mka-beware-1.1_cookie-3.0/resnet101_mka-beware-1.1_cookie-3.0_sgd_e5.pt',
+    'output/pretrained/mka-beware-1.1_cookie-3.0/resnet101_mka-beware-1.1_cookie-3.0_sgd_e50.pt',
 ]
 
 for model_path in model_list:
@@ -459,8 +464,12 @@ for model_path in model_list:
 
     # for path in sorted(glob.glob('data/test/merged/*.json')):
     # for path in sorted(glob.glob('data/test/complex/*.json')):
+    # for path in sorted(
+    #         glob.glob('data/test/complex/05-03-2021-12-17-26/*.json')):
+    # for path in sorted(
+    #         glob.glob('data/test/tracking/15-03-2021-04-23-26/*.json')):
     for path in sorted(
-            glob.glob('data/test/complex/05-03-2021-12-17-26/*.json')):
+            glob.glob('data/test/tracking/as_test_01_combined.json')):
         print(f'------------------------')
         print(f'Start evaluating: {model_path.split("/")[-1]}')
         print(f'  using: {path}')
